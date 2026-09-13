@@ -24,8 +24,19 @@ import {
 import firebaseConfig from '../firebase-applet-config.json';
 import { Family, FamilyMember, FamilyInvitation, MedicalDocument } from './types';
 
+// Dynamically resolve Firebase API Key from environment to protect secrets from git
+const resolvedApiKey =
+  ((import.meta as any).env?.VITE_FIREBASE_API_KEY as string) ||
+  (firebaseConfig as any).apiKey ||
+  '';
+
+const resolvedConfig = {
+  ...firebaseConfig,
+  apiKey: resolvedApiKey,
+};
+
 // Initialize Firebase App
-const app = !getApps().length ? initializeApp(firebaseConfig) : getApp();
+const app = !getApps().length ? initializeApp(resolvedConfig) : getApp();
 
 /* CRITICAL: Must specify databaseId per platform skill */
 export const db = getFirestore(app, firebaseConfig.firestoreDatabaseId);

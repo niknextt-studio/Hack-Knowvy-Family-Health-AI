@@ -160,6 +160,43 @@ ${visitSummary.disclaimer}
           </div>
         </div>
 
+        {/* STEP PROGRESS BAR */}
+        <div className="bg-slate-50 border-b border-slate-100 px-6 py-2 flex items-center justify-between text-xs">
+          <div className="flex items-center gap-2">
+            <span
+              className={`w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-bold ${
+                step === 'input'
+                  ? 'bg-teal-600 text-white'
+                  : 'bg-teal-100 text-teal-800'
+              }`}
+            >
+              1
+            </span>
+            <span className={`font-semibold ${step === 'input' ? 'text-teal-900' : 'text-slate-500'}`}>
+              Visit Details
+            </span>
+          </div>
+
+          <div className="h-0.5 w-12 bg-slate-200" />
+
+          <div className="flex items-center gap-2">
+            <span
+              className={`w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-bold ${
+                step === 'summary'
+                  ? 'bg-teal-600 text-white'
+                  : isLoading
+                  ? 'bg-teal-600 text-white animate-pulse'
+                  : 'bg-slate-200 text-slate-500'
+              }`}
+            >
+              2
+            </span>
+            <span className={`font-semibold ${step === 'summary' ? 'text-teal-900' : 'text-slate-500'}`}>
+              Clinical Brief
+            </span>
+          </div>
+        </div>
+
         {/* STEP 1: CONFIGURE VISIT */}
         {step === 'input' && (
           <form onSubmit={handleGenerate} className="p-6 space-y-5 text-xs overflow-y-auto">

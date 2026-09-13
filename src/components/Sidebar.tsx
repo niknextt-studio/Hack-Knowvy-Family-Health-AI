@@ -6,12 +6,14 @@ import {
   FileText,
   Pill,
   Calendar,
+  Stethoscope,
   Sparkles,
   GitBranch,
   Share2,
   Lock,
   Upload,
-  HeartPulse,
+  ChevronRight,
+  X,
 } from 'lucide-react';
 import { FamilyMember } from '../types';
 
@@ -31,135 +33,173 @@ interface SidebarProps {
   currentView: NavView;
   onSelectView: (view: NavView) => void;
   onOpenUpload: () => void;
-  activeMember: FamilyMember;
-  members: FamilyMember[];
-  onSelectMember: (member: FamilyMember) => void;
+  activeMember?: FamilyMember;
+  members?: FamilyMember[];
+  onSelectMember?: (member: FamilyMember) => void;
+  onClose?: () => void;
+}
+
+interface NavItemConfig {
+  id: NavView;
+  label: string;
+  icon: React.ComponentType<{ className?: string }>;
+  iconBg: string;
+  iconColor: string;
+  badge?: string;
 }
 
 export const Sidebar: React.FC<SidebarProps> = ({
   currentView,
   onSelectView,
   onOpenUpload,
-  activeMember,
-  members,
-  onSelectMember,
+  onClose,
 }) => {
-  const mainNavItems: { id: NavView; label: string; icon: React.ComponentType<{ className?: string }> }[] = [
-    { id: 'overview', label: 'Family Overview', icon: LayoutDashboard },
-    { id: 'members', label: 'Family Members', icon: Users },
-    { id: 'timeline', label: 'Health Timeline', icon: Clock },
-    { id: 'reports', label: 'Medical Reports', icon: FileText },
-    { id: 'medications', label: 'Medications', icon: Pill },
-    { id: 'appointments', label: 'Appointments', icon: Calendar },
-    { id: 'ai_assistant', label: 'AI Health Assistant', icon: Sparkles },
-    { id: 'family_history', label: 'Family Health Insights', icon: GitBranch },
-    { id: 'doctor_sharing', label: 'Doctor Sharing', icon: Share2 },
-    { id: 'settings', label: 'Privacy & Access', icon: Lock },
+  const navItems: NavItemConfig[] = [
+    {
+      id: 'overview',
+      label: 'Overview',
+      icon: LayoutDashboard,
+      iconBg: 'bg-teal-50 text-teal-600',
+      iconColor: 'text-teal-600',
+    },
+    {
+      id: 'ai_assistant',
+      label: 'AI Assistant',
+      icon: Sparkles,
+      iconBg: 'bg-purple-50 text-purple-600',
+      iconColor: 'text-purple-600',
+      badge: 'AI',
+    },
+    {
+      id: 'reports',
+      label: 'Lab Reports',
+      icon: FileText,
+      iconBg: 'bg-blue-50 text-blue-600',
+      iconColor: 'text-blue-600',
+    },
+    {
+      id: 'medications',
+      label: 'Medications',
+      icon: Pill,
+      iconBg: 'bg-amber-50 text-amber-600',
+      iconColor: 'text-amber-600',
+    },
+    {
+      id: 'members',
+      label: 'Family Members',
+      icon: Users,
+      iconBg: 'bg-emerald-50 text-emerald-600',
+      iconColor: 'text-emerald-600',
+    },
+    {
+      id: 'timeline',
+      label: 'Timeline',
+      icon: Clock,
+      iconBg: 'bg-cyan-50 text-cyan-600',
+      iconColor: 'text-cyan-600',
+    },
+    {
+      id: 'appointments',
+      label: 'Doctor Visits',
+      icon: Stethoscope,
+      iconBg: 'bg-teal-50 text-teal-600',
+      iconColor: 'text-teal-600',
+    },
+    {
+      id: 'family_history',
+      label: 'Family Insights',
+      icon: GitBranch,
+      iconBg: 'bg-indigo-50 text-indigo-600',
+      iconColor: 'text-indigo-600',
+    },
+    {
+      id: 'doctor_sharing',
+      label: 'Doctor Sharing',
+      icon: Share2,
+      iconBg: 'bg-sky-50 text-sky-600',
+      iconColor: 'text-sky-600',
+    },
+    {
+      id: 'settings',
+      label: 'Privacy & Security',
+      icon: Lock,
+      iconBg: 'bg-slate-100 text-slate-600',
+      iconColor: 'text-slate-600',
+    },
   ];
 
   return (
-    <aside className="w-64 bg-white border-r border-slate-200/80 flex flex-col justify-between flex-shrink-0 min-h-[calc(100vh-4rem)] p-4">
-      <div className="space-y-6">
-        {/* Upload Action Button */}
+    <div className="w-full h-full flex flex-col bg-white select-none">
+      {/* 1. Header with visual title & close button on mobile */}
+      <div className="px-4 py-3 border-b border-slate-100 flex items-center justify-between flex-shrink-0">
+        <span className="text-[11px] font-bold uppercase tracking-wider text-slate-400">
+          Navigation
+        </span>
+        {onClose && (
+          <button
+            type="button"
+            onClick={onClose}
+            className="md:hidden p-1 text-slate-400 hover:text-slate-700 hover:bg-slate-100 rounded-lg transition cursor-pointer"
+            title="Close menu"
+            aria-label="Close menu"
+          >
+            <X className="w-4 h-4" />
+          </button>
+        )}
+      </div>
+
+      {/* 2. Visual Action: Quick Upload Record */}
+      <div className="p-3 pb-2 flex-shrink-0">
         <button
+          type="button"
           onClick={onOpenUpload}
-          className="w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-teal-600 hover:bg-teal-700 text-white rounded-xl text-sm font-semibold shadow-sm shadow-teal-700/15 transition group"
+          className="w-full flex items-center justify-center gap-2 py-2 px-3 bg-teal-600 hover:bg-teal-700 text-white rounded-xl text-xs font-bold shadow-xs shadow-teal-700/15 transition cursor-pointer active:scale-[0.99]"
         >
-          <Upload className="w-4 h-4 transition group-hover:-translate-y-0.5" />
-          <span>Upload Medical Record</span>
+          <Upload className="w-3.5 h-3.5" />
+          <span>Upload Record</span>
         </button>
+      </div>
 
-        {/* Selected Member context card */}
-        <div className="p-3 bg-slate-50 border border-slate-200/70 rounded-xl">
-          <div className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider mb-2 flex items-center justify-between">
-            <span>Viewing Profile</span>
-            <span
-              className={`w-2 h-2 rounded-full ${
-                activeMember.status === 'healthy'
-                  ? 'bg-emerald-500'
-                  : activeMember.status === 'stable'
-                  ? 'bg-teal-500'
-                  : 'bg-amber-400 ring-2 ring-amber-200'
+      {/* 3. Visual Navigation List with Color Indicators */}
+      <nav className="flex-1 overflow-y-auto px-2.5 py-1 space-y-1 scrollbar-thin">
+        {navItems.map((item) => {
+          const Icon = item.icon;
+          const isActive = currentView === item.id;
+
+          return (
+            <button
+              key={item.id}
+              type="button"
+              onClick={() => onSelectView(item.id)}
+              className={`w-full flex items-center gap-2.5 px-2.5 py-2 rounded-xl text-xs font-semibold transition group cursor-pointer ${
+                isActive
+                  ? 'bg-teal-50 text-teal-900 font-bold border border-teal-200/80 shadow-2xs'
+                  : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50 border border-transparent'
               }`}
-            />
-          </div>
-          <div className="flex items-center gap-2.5">
-            <img
-              src={activeMember.avatar}
-              alt={activeMember.name}
-              className="w-9 h-9 rounded-full object-cover border border-slate-200"
-            />
-            <div className="min-w-0 flex-1">
-              <div className="text-xs font-bold text-slate-900 truncate">{activeMember.name}</div>
-              <div className="text-[11px] text-slate-500">{activeMember.age} yrs • {activeMember.bloodType}</div>
-            </div>
-          </div>
-
-          <div className="mt-2.5 pt-2 border-t border-slate-200/60 flex items-center justify-between">
-            <select
-              value={activeMember.id}
-              onChange={(e) => {
-                const found = members.find((m) => m.id === e.target.value);
-                if (found) onSelectMember(found);
-              }}
-              className="w-full text-xs bg-white border border-slate-200 rounded-lg px-2 py-1 text-slate-700 font-medium focus:outline-none focus:ring-1 focus:ring-teal-500"
             >
-              {members.map((m) => (
-                <option key={m.id} value={m.id}>
-                  {m.name} ({m.relationship})
-                </option>
-              ))}
-            </select>
-          </div>
-        </div>
-
-        {/* Navigation List */}
-        <nav className="space-y-1">
-          <div className="text-[11px] font-bold text-slate-400 uppercase tracking-wider px-3 mb-1.5">
-            Workspace
-          </div>
-          {mainNavItems.map((item) => {
-            const Icon = item.icon;
-            const isActive = currentView === item.id;
-            return (
-              <button
-                key={item.id}
-                onClick={() => onSelectView(item.id)}
-                className={`w-full flex items-center gap-3 px-3 py-2 rounded-xl text-xs font-semibold transition ${
-                  isActive
-                    ? 'bg-teal-50 text-teal-800 font-bold border border-teal-200/60 shadow-2xs'
-                    : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50'
+              <div
+                className={`w-7 h-7 rounded-lg flex items-center justify-center transition flex-shrink-0 ${
+                  isActive ? 'bg-teal-600 text-white shadow-2xs' : item.iconBg
                 }`}
               >
-                <Icon
-                  className={`w-4 h-4 transition ${
-                    isActive ? 'text-teal-700' : 'text-slate-400 group-hover:text-slate-600'
-                  }`}
-                />
-                <span>{item.label}</span>
-                {item.id === 'ai_assistant' && (
-                  <span className="ml-auto text-[10px] px-1.5 py-0.5 rounded-full bg-teal-100/70 text-teal-800 font-bold">
-                    AI
-                  </span>
-                )}
-              </button>
-            );
-          })}
-        </nav>
-      </div>
+                <Icon className={`w-3.5 h-3.5 ${isActive ? 'text-white' : item.iconColor}`} />
+              </div>
 
-      {/* Safety & Compliance notice */}
-      <div className="pt-4 border-t border-slate-100">
-        <div className="p-2.5 rounded-xl bg-slate-50 border border-slate-200/80 text-[11px] text-slate-600 leading-relaxed">
-          <div className="flex items-center gap-1.5 font-bold text-slate-800 mb-1">
-            <HeartPulse className="w-3.5 h-3.5 text-teal-600" />
-            <span>Health Information Only</span>
-          </div>
-          <p className="text-[10px] text-slate-500">
-            Family Health AI organizes medical records and does not provide clinical diagnoses. Always consult licensed doctors for medical concerns.
-          </p>
-        </div>
-      </div>
-    </aside>
+              <span className="truncate flex-1 text-left">{item.label}</span>
+
+              {item.badge && (
+                <span className="text-[9px] font-bold px-1.5 py-0.5 rounded-md bg-purple-100 text-purple-700">
+                  {item.badge}
+                </span>
+              )}
+
+              {isActive && (
+                <ChevronRight className="w-3.5 h-3.5 text-teal-600 ml-auto flex-shrink-0" />
+              )}
+            </button>
+          );
+        })}
+      </nav>
+    </div>
   );
 };

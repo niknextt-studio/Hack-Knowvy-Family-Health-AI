@@ -110,6 +110,9 @@ export interface MedicalDocument {
   aiSummary?: string;
   comparedReportId?: string;
   comparisonNotes?: string;
+  uploadDate?: string;
+  remarks?: string;
+  tags?: string[];
 }
 
 export interface MedicalCondition {
@@ -136,8 +139,21 @@ export interface Medication {
   isCurrent: boolean;
   reason: string;
   prescribingDoctor: string;
+  doctorSpecialty?: string;
+  facility?: string;
+  rxNumber?: string;
+  prescribedDate?: string;
+  prescriptionDocId?: string;
+  prescriptionDocTitle?: string;
+  consumptionStatus?: 'active' | 'completed' | 'discontinued' | 'tapered' | 'as_needed';
+  durationText?: string;
+  adherenceRate?: number;
+  instructions?: string;
   notes?: string;
   timing?: string;
+  refillsRemaining?: number;
+  lastConsumedDate?: string;
+  sideEffects?: string;
 }
 
 export interface Treatment {
@@ -167,12 +183,29 @@ export interface Appointment {
   id: string;
   memberId: string;
   doctorName: string;
+  doctorTitle?: string;
   specialty: string;
   date: string;
   time: string;
   clinic: string;
-  reason: string;
+  reason: string; // "Why visited" (Chief complaint / clinical objective)
   status: 'upcoming' | 'completed' | 'cancelled';
+  // Redesign fields: "What was the report & findings"
+  reportSummary?: string; // Summary of what the clinical report or doctor concluded
+  diagnosis?: string; // Clinical diagnosis or assessment
+  vitalsRecorded?: {
+    bloodPressure?: string;
+    pulse?: string;
+    weight?: string;
+    temperature?: string;
+    bloodSugar?: string;
+  };
+  keyFindings?: string[]; // Bulleted takeaways from the report
+  prescriptionsGiven?: string[]; // Medications prescribed or renewed
+  followUpPlan?: string; // Recommendations, lifestyle advice, or next checkup date
+  relatedDocId?: string; // ID of linked document/lab report
+  relatedDocTitle?: string; // Display title of the linked report
+  visitType?: 'Routine Checkup' | 'Specialist Consultation' | 'Diagnostic Review' | 'Follow-up' | 'Post-Op Review' | 'Urgent Care';
 }
 
 export interface TimelineEvent {
@@ -188,6 +221,16 @@ export interface TimelineEvent {
   treatment?: string;
   relatedDocId?: string;
   notes?: string;
+  healthImpact?: string;
+  biomarkerChange?: {
+    label: string;
+    from: string;
+    to: string;
+    trend: 'improved' | 'stable' | 'needs_attention';
+  };
+  era?: string;
+  facility?: string;
+  category?: string;
 }
 
 export interface Citation {

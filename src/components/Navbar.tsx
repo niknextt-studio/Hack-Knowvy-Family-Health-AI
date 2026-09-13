@@ -3,8 +3,6 @@ import {
   ShieldCheck,
   Bell,
   User,
-  Menu,
-  X,
   ChevronDown,
   LayoutDashboard,
   Users,
@@ -18,15 +16,11 @@ import {
   Lock,
   Plus,
   Search,
-  Copy,
   Check,
-  ExternalLink,
-  ChevronRight,
-  Activity,
-  ArrowUpRight,
   LogOut,
   Edit3,
   UserPlus,
+  Menu,
   Hash,
 } from 'lucide-react';
 import { Family, FamilyMember, NotificationItem } from '../types';
@@ -49,8 +43,8 @@ interface NavbarProps {
   onOpenInviteModal?: () => void;
   notifications: NotificationItem[];
   onMarkNotificationRead: (id: string) => void;
-  onViewLanding: () => void;
-  isLandingActive: boolean;
+  onViewLanding?: () => void;
+  isLandingActive?: boolean;
   isSidebarOpen?: boolean;
   onToggleSidebar?: () => void;
 }
@@ -72,11 +66,11 @@ export const Navbar: React.FC<NavbarProps> = ({
   onOpenInviteModal,
   notifications,
   onMarkNotificationRead,
-  onViewLanding,
+  isSidebarOpen,
+  onToggleSidebar,
 }) => {
   const [showUserMenu, setShowUserMenu] = useState(false);
   const [showNotifMenu, setShowNotifMenu] = useState(false);
-  const [isDrawerOpen, setIsDrawerOpen] = useState(false);
   const [copiedCode, setCopiedCode] = useState(false);
 
   const userMenuRef = useRef<HTMLDivElement>(null);
@@ -98,11 +92,10 @@ export const Navbar: React.FC<NavbarProps> = ({
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
-  // Close drawer on Escape
+  // Close menus on Escape
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'Escape') {
-        setIsDrawerOpen(false);
         setShowUserMenu(false);
         setShowNotifMenu(false);
       }
@@ -111,143 +104,46 @@ export const Navbar: React.FC<NavbarProps> = ({
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, []);
 
-  // Lock body scroll when drawer is open
-  useEffect(() => {
-    if (isDrawerOpen) {
-      document.body.style.overflow = 'hidden';
-    } else {
-      document.body.style.overflow = '';
-    }
-    return () => {
-      document.body.style.overflow = '';
-    };
-  }, [isDrawerOpen]);
-
   const unreadNotifs = notifications.filter((n) => n.unread);
-
-  const handleCopyInvite = () => {
-    navigator.clipboard.writeText(family.inviteCode);
-    setCopiedCode(true);
-    setTimeout(() => setCopiedCode(false), 2000);
-  };
 
   const handleNavigate = (view: NavView) => {
     if (onSelectView) {
       onSelectView(view);
     }
-    setIsDrawerOpen(false);
   };
-
-  // Visually rich menu items categorized and clean
-  const mainNavItems: {
-    id: NavView;
-    label: string;
-    icon: React.ComponentType<{ className?: string }>;
-    color: string;
-    bgColor: string;
-    borderColor: string;
-    badge?: string;
-  }[] = [
-    {
-      id: 'overview',
-      label: 'Overview',
-      icon: LayoutDashboard,
-      color: 'text-teal-700',
-      bgColor: 'bg-teal-50 hover:bg-teal-100/80',
-      borderColor: 'border-teal-200/80',
-    },
-    {
-      id: 'ai_assistant',
-      label: 'AI Assistant',
-      icon: Sparkles,
-      color: 'text-purple-700',
-      bgColor: 'bg-purple-50 hover:bg-purple-100/80',
-      borderColor: 'border-purple-200/80',
-      badge: 'AI',
-    },
-    {
-      id: 'reports',
-      label: 'Lab Reports',
-      icon: FileText,
-      color: 'text-blue-700',
-      bgColor: 'bg-blue-50 hover:bg-blue-100/80',
-      borderColor: 'border-blue-200/80',
-      badge: 'Trends',
-    },
-    {
-      id: 'medications',
-      label: 'Medications',
-      icon: Pill,
-      color: 'text-amber-700',
-      bgColor: 'bg-amber-50 hover:bg-amber-100/80',
-      borderColor: 'border-amber-200/80',
-    },
-    {
-      id: 'members',
-      label: 'Members',
-      icon: Users,
-      color: 'text-emerald-700',
-      bgColor: 'bg-emerald-50 hover:bg-emerald-100/80',
-      borderColor: 'border-emerald-200/80',
-    },
-    {
-      id: 'timeline',
-      label: 'Timeline',
-      icon: Clock,
-      color: 'text-cyan-700',
-      bgColor: 'bg-cyan-50 hover:bg-cyan-100/80',
-      borderColor: 'border-cyan-200/80',
-    },
-    {
-      id: 'family_history',
-      label: 'Family Insights',
-      icon: GitBranch,
-      color: 'text-indigo-700',
-      bgColor: 'bg-indigo-50 hover:bg-indigo-100/80',
-      borderColor: 'border-indigo-200/80',
-    },
-    {
-      id: 'appointments',
-      label: 'Doctor Visits',
-      icon: Calendar,
-      color: 'text-rose-700',
-      bgColor: 'bg-rose-50 hover:bg-rose-100/80',
-      borderColor: 'border-rose-200/80',
-    },
-    {
-      id: 'doctor_sharing',
-      label: 'Doctor Links',
-      icon: Share2,
-      color: 'text-sky-700',
-      bgColor: 'bg-sky-50 hover:bg-sky-100/80',
-      borderColor: 'border-sky-200/80',
-      badge: 'PIN',
-    },
-    {
-      id: 'settings',
-      label: 'Privacy & Security',
-      icon: Lock,
-      color: 'text-slate-700',
-      bgColor: 'bg-slate-100 hover:bg-slate-200/80',
-      borderColor: 'border-slate-200',
-    },
-  ];
 
   return (
     <>
       <header
         id="main-app-header"
-        className="sticky top-0 z-40 bg-white/95 backdrop-blur-md border-b border-slate-200/90 shadow-2xs"
+        className="sticky top-0 z-40 bg-white/95 backdrop-blur-md border-b border-slate-200/90 shadow-2xs w-full"
       >
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+        <div className="w-full px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between gap-4">
           
-          {/* 1. LEFT: LOGO & NAME ONLY */}
-          <div className="flex items-center gap-3">
+          {/* 1. LEFT: HAMBURGER MENU TOGGLE & BRAND LOGO */}
+          <div className="flex items-center gap-2 sm:gap-2.5 flex-shrink-0">
+            {onToggleSidebar && (
+              <button
+                id="navbar-hamburger-btn"
+                type="button"
+                onClick={onToggleSidebar}
+                className={`p-2 rounded-xl transition cursor-pointer flex items-center justify-center border ${
+                  isSidebarOpen
+                    ? 'bg-teal-50 border-teal-200 text-teal-800 hover:bg-teal-100'
+                    : 'bg-white border-slate-200/90 text-slate-700 hover:bg-slate-100 hover:text-slate-900 shadow-2xs'
+                }`}
+                title={isSidebarOpen ? 'Close Menu' : 'Open Menu'}
+                aria-label={isSidebarOpen ? 'Close Menu' : 'Open Menu'}
+              >
+                <Menu className="w-5 h-5 text-slate-700" />
+              </button>
+            )}
+
             <button
               id="brand-logo-btn"
-              onClick={onViewLanding}
-              className="flex items-center gap-2.5 text-left group focus:outline-none"
-              title="Go to Home / Overview"
+              onClick={() => handleNavigate('overview')}
+              className="flex items-center gap-2.5 text-left group focus:outline-none cursor-pointer"
+              title="Return to Health Overview"
             >
               <div className="w-9 h-9 rounded-xl bg-teal-600 flex items-center justify-center text-white shadow-xs shadow-teal-700/20 group-hover:bg-teal-700 transition">
                 <ShieldCheck className="w-5 h-5 text-teal-50" />
@@ -263,8 +159,29 @@ export const Navbar: React.FC<NavbarProps> = ({
             </button>
           </div>
 
-          {/* 2. RIGHT: NOTIFICATION, ACCOUNT, AND HAMBURGER ICON */}
-          <div className="flex items-center gap-2 sm:gap-3">
+          {/* 2. RIGHT: SEARCH, UPLOAD, NOTIFICATIONS, ACCOUNT */}
+          <div className="flex items-center gap-2 sm:gap-2.5 flex-shrink-0">
+            {/* Global Search button */}
+            <button
+              id="navbar-search-btn"
+              onClick={onOpenSearch}
+              className="hidden sm:flex items-center gap-2 px-3 py-1.5 text-xs text-slate-600 bg-slate-100/80 hover:bg-slate-200/70 border border-slate-200 rounded-xl transition"
+              title="Search records, medications, vitals"
+            >
+              <Search className="w-3.5 h-3.5 text-slate-500" />
+              <span className="hidden lg:inline text-[11px] font-medium">Search records...</span>
+            </button>
+
+            {/* Centralized Upload Record Action Button */}
+            <button
+              id="navbar-upload-btn"
+              onClick={onOpenUpload}
+              className="flex items-center gap-1.5 px-3.5 py-1.5 bg-teal-600 hover:bg-teal-700 text-white rounded-xl text-xs font-bold shadow-2xs transition"
+              title="Upload lab report, prescription, or scan"
+            >
+              <Plus className="w-3.5 h-3.5" />
+              <span className="hidden sm:inline">Upload</span>
+            </button>
             
             {/* NOTIFICATION ICON */}
             <div className="relative" ref={notifMenuRef}>
@@ -490,16 +407,6 @@ export const Navbar: React.FC<NavbarProps> = ({
                       <Lock className="w-3.5 h-3.5 text-slate-500" />
                       <span>Privacy & Access Control</span>
                     </button>
-                    <button
-                      onClick={() => {
-                        onViewLanding();
-                        setShowUserMenu(false);
-                      }}
-                      className="w-full flex items-center gap-2 px-3 py-2 text-slate-600 hover:text-slate-900 hover:bg-slate-50 rounded-xl transition"
-                    >
-                      <ExternalLink className="w-3.5 h-3.5 text-slate-500" />
-                      <span>Public Health Portal</span>
-                    </button>
                     {onLogout && (
                       <button
                         onClick={() => {
@@ -517,220 +424,9 @@ export const Navbar: React.FC<NavbarProps> = ({
               )}
             </div>
 
-            {/* HAMBURGER ICON FOR FULL PAGES */}
-            <button
-              id="navbar-hamburger-btn"
-              onClick={() => setIsDrawerOpen(true)}
-              className="p-2 text-slate-700 hover:text-slate-900 hover:bg-slate-100 rounded-xl transition focus:outline-none focus:ring-2 focus:ring-teal-500/20"
-              title="Open full pages menu"
-              aria-label="Open full pages menu"
-            >
-              <Menu className="w-5 h-5" />
-            </button>
-
           </div>
         </div>
       </header>
-
-      {/* CRISP, VISUAL FULL PAGES NAVIGATION DRAWER */}
-      {isDrawerOpen && (
-        <div
-          id="full-pages-drawer-overlay"
-          className="fixed inset-0 z-50 flex justify-end"
-          role="dialog"
-          aria-modal="true"
-        >
-          {/* Backdrop with subtle blur */}
-          <div
-            className="fixed inset-0 bg-slate-900/40 backdrop-blur-xs transition-opacity animate-in fade-in duration-200"
-            onClick={() => setIsDrawerOpen(false)}
-          />
-
-          {/* Slide-over Drawer Panel: Clean, crisp, visual layout */}
-          <aside
-            id="full-pages-drawer-panel"
-            className="relative w-full max-w-sm sm:max-w-[420px] bg-white h-full shadow-2xl z-50 flex flex-col border-l border-slate-200/90 animate-in slide-in-from-right duration-200"
-          >
-            {/* Header: Crisp & minimal */}
-            <div className="px-5 py-4 border-b border-slate-100 flex items-center justify-between">
-              <div className="flex items-center gap-2.5">
-                <div className="w-8 h-8 rounded-xl bg-teal-600 flex items-center justify-center text-white shadow-xs">
-                  <ShieldCheck className="w-4 h-4 text-teal-50" />
-                </div>
-                <div>
-                  <h2 className="font-extrabold text-sm sm:text-base text-slate-900 leading-none">
-                    Pages & Tools
-                  </h2>
-                  <span className="text-[11px] text-slate-400 font-medium">
-                    {family.name}
-                  </span>
-                </div>
-              </div>
-
-              {/* Close Button */}
-              <button
-                id="full-pages-drawer-close-btn"
-                onClick={() => setIsDrawerOpen(false)}
-                className="p-2 text-slate-400 hover:text-slate-700 hover:bg-slate-100 rounded-xl transition focus:outline-none"
-                title="Close (Esc)"
-                aria-label="Close menu"
-              >
-                <X className="w-5 h-5" />
-              </button>
-            </div>
-
-            {/* Quick Action Strip: 2 Compact Visual Buttons */}
-            <div className="px-5 py-3 border-b border-slate-100/90 bg-slate-50/50 flex items-center gap-2.5">
-              <button
-                onClick={() => {
-                  onOpenUpload();
-                  setIsDrawerOpen(false);
-                }}
-                className="flex-1 flex items-center justify-center gap-1.5 py-2 px-3 bg-teal-600 hover:bg-teal-700 text-white rounded-xl text-xs font-semibold shadow-xs transition"
-              >
-                <Plus className="w-3.5 h-3.5" />
-                <span>Upload</span>
-              </button>
-              <button
-                onClick={() => {
-                  onOpenSearch();
-                  setIsDrawerOpen(false);
-                }}
-                className="flex-1 flex items-center justify-center gap-1.5 py-2 px-3 bg-white hover:bg-slate-100 text-slate-700 border border-slate-200/90 rounded-xl text-xs font-medium transition"
-              >
-                <Search className="w-3.5 h-3.5 text-slate-500" />
-                <span>Search</span>
-                <kbd className="text-[9px] bg-slate-100 text-slate-400 px-1 py-0.2 rounded font-mono">⌘K</kbd>
-              </button>
-            </div>
-
-            {/* Visual Grid: 2-column tiles with zero long descriptions */}
-            <div className="flex-1 overflow-y-auto px-4 py-4 space-y-4">
-              {/* Grid Section */}
-              <div className="grid grid-cols-2 gap-2.5">
-                {mainNavItems.map((item) => {
-                  const Icon = item.icon;
-                  const isActive = currentView === item.id;
-                  const isAI = item.id === 'ai_assistant';
-
-                  return (
-                    <button
-                      key={item.id}
-                      onClick={() => handleNavigate(item.id)}
-                      className={`relative flex flex-col items-start p-3 rounded-2xl border text-left transition-all duration-150 group ${
-                        isActive
-                          ? 'bg-teal-50/90 border-teal-300 shadow-xs ring-1 ring-teal-200'
-                          : 'bg-white hover:bg-slate-50/90 border-slate-200/90 hover:border-slate-300 shadow-2xs hover:-translate-y-0.5'
-                      }`}
-                    >
-                      {/* Top Row: Icon and Badge */}
-                      <div className="w-full flex items-center justify-between mb-2">
-                        <div
-                          className={`w-9 h-9 rounded-xl flex items-center justify-center transition ${
-                            isActive
-                              ? 'bg-teal-600 text-white shadow-xs'
-                              : `${item.bgColor} ${item.color}`
-                          }`}
-                        >
-                          <Icon className="w-4 h-4" />
-                        </div>
-
-                        {item.badge && (
-                          <span
-                            className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full ${
-                              isAI
-                                ? 'bg-purple-100 text-purple-700'
-                                : 'bg-slate-100 text-slate-600'
-                            }`}
-                          >
-                            {item.badge}
-                          </span>
-                        )}
-                        {isActive && !item.badge && (
-                          <span className="w-2 h-2 rounded-full bg-teal-600" />
-                        )}
-                      </div>
-
-                      {/* Label */}
-                      <span
-                        className={`text-xs font-bold tracking-tight transition truncate w-full ${
-                          isActive
-                            ? 'text-teal-950'
-                            : 'text-slate-800 group-hover:text-slate-900'
-                        }`}
-                      >
-                        {item.label}
-                      </span>
-                    </button>
-                  );
-                })}
-              </div>
-
-              {/* Family Code Pill */}
-              <div className="p-3 rounded-xl bg-slate-50 border border-slate-200/80 flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-                  <span className="text-[11px] font-semibold text-slate-700">Invite Code:</span>
-                  <span className="text-[11px] font-mono text-slate-600 font-bold">{family.inviteCode}</span>
-                </div>
-                <button
-                  onClick={handleCopyInvite}
-                  className="flex items-center gap-1 text-[11px] font-semibold text-teal-700 hover:text-teal-800 px-2 py-0.5 rounded-lg hover:bg-teal-50 transition"
-                  title="Copy code"
-                >
-                  {copiedCode ? <Check className="w-3 h-3" /> : <Copy className="w-3 h-3" />}
-                  <span>{copiedCode ? 'Copied' : 'Copy'}</span>
-                </button>
-              </div>
-            </div>
-
-            {/* Drawer Footer: Active Profile & Landing link */}
-            <div className="px-4 py-3 border-t border-slate-100 bg-slate-50/70 flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <img
-                  src={activeMember.avatar}
-                  alt={activeMember.name}
-                  className="w-7 h-7 rounded-full object-cover border border-slate-200"
-                />
-                <div className="leading-tight">
-                  <span className="text-xs font-bold text-slate-800 block">
-                    {activeMember.name}
-                  </span>
-                  <span className="text-[10px] text-slate-400">
-                    {activeMember.relationship} • {activeMember.bloodType}
-                  </span>
-                </div>
-              </div>
-
-              <div className="flex items-center gap-1.5">
-                <button
-                  onClick={() => {
-                    onViewLanding();
-                    setIsDrawerOpen(false);
-                  }}
-                  className="flex items-center gap-1 text-[11px] font-semibold text-slate-600 hover:text-teal-700 px-2 py-1 rounded-lg hover:bg-white border border-transparent hover:border-slate-200 transition"
-                >
-                  <span>Portal</span>
-                  <ArrowUpRight className="w-3.5 h-3.5" />
-                </button>
-                {onLogout && (
-                  <button
-                    onClick={() => {
-                      onLogout();
-                      setIsDrawerOpen(false);
-                    }}
-                    className="flex items-center gap-1 text-[11px] font-semibold text-rose-600 hover:text-rose-700 px-2 py-1 rounded-lg hover:bg-rose-50 transition"
-                    title="Log Out"
-                  >
-                    <LogOut className="w-3.5 h-3.5" />
-                    <span>Log Out</span>
-                  </button>
-                )}
-              </div>
-            </div>
-          </aside>
-        </div>
-      )}
     </>
   );
 };

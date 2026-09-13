@@ -31,10 +31,15 @@ import {
 import { Navbar } from './components/Navbar';
 import { Sidebar, NavView } from './components/Sidebar';
 import { MobileNav } from './components/MobileNav';
-import { LandingPage } from './components/LandingPage';
+import { ArrowLeft } from 'lucide-react';
 import { AuthModal, AuthMode } from './components/AuthModal';
 import { FamilyDashboard } from './components/FamilyDashboard';
 import { MemberProfile, ProfileTab } from './components/MemberProfile';
+import { FamilyMembersView } from './components/FamilyMembersView';
+import { HealthTimelineView } from './components/HealthTimelineView';
+import { DoctorVisitsView } from './components/DoctorVisitsView';
+import { LabReportsView } from './components/LabReportsView';
+import { MedicationsView } from './components/MedicationsView';
 import { DocumentUploadModal } from './components/DocumentUploadModal';
 import { ReportDetailModal } from './components/ReportDetailModal';
 import { AIAssistantView } from './components/AIAssistantView';
@@ -44,6 +49,7 @@ import { DoctorShareModal } from './components/DoctorShareModal';
 import { GlobalSearchModal } from './components/GlobalSearchModal';
 import { PrivacySettingsModal } from './components/PrivacySettingsModal';
 import { FamilyInsightsView } from './components/FamilyInsightsView';
+import { DoctorSharingView } from './components/DoctorSharingView';
 import { LoginPage } from './components/LoginPage';
 import { InviteMemberModal } from './components/InviteMemberModal';
 import { PendingInvitationsBanner } from './components/PendingInvitationsBanner';
@@ -142,8 +148,8 @@ export function App() {
   // Navigation State
   const [currentView, setCurrentView] = useState<NavView>('overview');
   const [memberProfileInitialTab, setMemberProfileInitialTab] = useState<ProfileTab>('overview');
-  const [isLandingActive, setIsLandingActive] = useState<boolean>(false);
   const [aiAssistantInitialQuery, setAiAssistantInitialQuery] = useState<string>('');
+  const [isMemberDetailView, setIsMemberDetailView] = useState<boolean>(false);
 
   // Modals
   const [authModal, setAuthModal] = useState<{ isOpen: boolean; mode: AuthMode }>({
@@ -177,6 +183,20 @@ export function App() {
   const [isInviteModalOpen, setIsInviteModalOpen] = useState<boolean>(false);
   const [pendingInvitations, setPendingInvitations] = useState<FamilyInvitation[]>([]);
   const [firebaseUser, setFirebaseUser] = useState<any>(() => auth.currentUser);
+
+  // Close sidebar on Escape key
+  useEffect(() => {
+    if (!isSidebarOpen) return;
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        setIsSidebarOpen(false);
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [isSidebarOpen]);
 
   // Realtime Firebase Auth synchronization
   useEffect(() => {
@@ -308,7 +328,6 @@ export function App() {
     if (updatedFamily) {
       setFamily(updatedFamily);
     }
-    setIsLandingActive(false);
   };
 
   const handleAddMember = (newMemberData: Partial<FamilyMember>) => {
@@ -404,6 +423,12 @@ export function App() {
     setNotifications((prev) => [notif, ...prev]);
   };
 
+  const handleUpdateDocumentRemarks = (docId: string, newRemarks: string) => {
+    setDocuments((prev) =>
+      prev.map((d) => (d.id === docId ? { ...d, remarks: newRemarks } : d))
+    );
+  };
+
   const handleAddMedication = (medData: Partial<Medication>) => {
     const newMed: Medication = {
       id: `med-${Date.now()}`,
@@ -435,6 +460,142 @@ export function App() {
       doctor: newMed.prescribingDoctor,
     };
     setTimeline((prev) => [newEvent, ...prev]);
+  };
+
+  const handleAddCondition = (condData: Partial<MedicalCondition>) => {
+    const newCond: MedicalCondition = {
+      id: `cond-${Date.now()}`,
+      memberId: condData.memberId || activeMember.id,
+      name: condData.name || 'Medical Condition',
+      dateDiagnosed: condData.dateDiagnosed || new Date().toISOString().split('T')[0],
+      status: condData.status || 'Active',
+      treatingDoctor: condData.treatingDoctor || 'Attending Physician',
+      relatedDocCount: condData.relatedDocIds ? condData.relatedDocIds.length : 0,
+      relatedDocIds: condData.relatedDocIds || [],
+      treatments: condData.treatments && condData.treatments.length > 0 ? condData.treatments : ['Routine clinical surveillance'],
+      notes: condData.notes || '',
+    };
+
+    setConditions((prev) => [newCond, ...prev]);
+
+    // Update conditionsSummary on member
+    setMembers((prev) =>
+      prev.map((m) => {
+        if (m.id === newCond.memberId) {
+          const currentSummaries = m.conditionsSummary.filter(
+            (c) => !c.toLowerCase().includes('no major')
+          );
+          return {
+            ...m,
+            conditionsSummary: [...currentSummaries, newCond.name],
+          };
+        }
+        return m;
+      })
+    );
+
+    const targetMember = members.find((m) => m.id === newCond.memberId) || activeMember;
+
+    // Timeline event
+    const newEvent: TimelineEvent = {
+      id: `evt-${Date.now()}`,
+      memberId: newCond.memberId,
+      year: new Date().getFullYear(),
+      month: new Date().toLocaleString('default', { month: 'short' }),
+      date: newCond.dateDiagnosed,
+      title: `Diagnosed: ${newCond.name}`,
+      eventType: 'diagnosis',
+      description: `Documented by ${newCond.treatingDoctor}. Status: ${newCond.status}. Plan: ${(newCond.treatments || []).join(', ')}.`,
+      doctor: newCond.treatingDoctor,
+    };
+    setTimeline((prev) => [newEvent, ...prev]);
+
+    // Notification
+    const notif: NotificationItem = {
+      id: `notif-${Date.now()}`,
+      title: 'Medical Condition Documented',
+      message: `${newCond.name} was added to ${targetMember.name}'s medical profile.`,
+      timestamp: 'Just now',
+      unread: true,
+      memberName: targetMember.name,
+    };
+    setNotifications((prev) => [notif, ...prev]);
+  };
+
+  const handleUpdateCondition = (condId: string, updates: Partial<MedicalCondition>) => {
+    setConditions((prev) =>
+      prev.map((c) => (c.id === condId ? { ...c, ...updates } : c))
+    );
+  };
+
+  const handleAddTimelineEvent = (eventData: Partial<TimelineEvent>) => {
+    const newEvt: TimelineEvent = {
+      id: `time-${Date.now()}`,
+      memberId: eventData.memberId || activeMember.id,
+      date: eventData.date || new Date().toISOString().split('T')[0],
+      year: eventData.year || new Date().getFullYear(),
+      month: eventData.month || 'September',
+      eventType: eventData.eventType || 'consultation',
+      title: eventData.title || 'Clinical Milestone',
+      description: eventData.description || 'Health milestone documented.',
+      doctor: eventData.doctor,
+      facility: eventData.facility,
+      treatment: eventData.treatment,
+      relatedDocId: eventData.relatedDocId,
+      notes: eventData.notes,
+      healthImpact: eventData.healthImpact,
+      biomarkerChange: eventData.biomarkerChange,
+      era: eventData.era,
+    };
+    setTimeline((prev) => [newEvt, ...prev]);
+
+    const targetMember = members.find((m) => m.id === newEvt.memberId) || activeMember;
+    const notif: NotificationItem = {
+      id: `notif-${Date.now()}`,
+      title: 'Health Milestone Documented',
+      message: `${newEvt.title} was added to ${targetMember.name}'s health history timeline.`,
+      timestamp: 'Just now',
+      unread: true,
+      memberName: targetMember.name,
+    };
+    setNotifications((prev) => [notif, ...prev]);
+  };
+
+  const handleAddAppointment = (aptData: Partial<Appointment>) => {
+    const newApt: Appointment = {
+      id: `apt-${Date.now()}`,
+      memberId: aptData.memberId || activeMember.id,
+      doctorName: aptData.doctorName || 'Attending Physician',
+      doctorTitle: aptData.doctorTitle,
+      specialty: aptData.specialty || 'Internal Medicine',
+      clinic: aptData.clinic || 'Family Health Clinic',
+      date: aptData.date || new Date().toISOString().split('T')[0],
+      time: aptData.time || '10:00 AM',
+      reason: aptData.reason || 'Routine consultation',
+      status: aptData.status || 'completed',
+      visitType: aptData.visitType || 'Specialist Consultation',
+      reportSummary: aptData.reportSummary,
+      diagnosis: aptData.diagnosis,
+      vitalsRecorded: aptData.vitalsRecorded,
+      keyFindings: aptData.keyFindings,
+      prescriptionsGiven: aptData.prescriptionsGiven,
+      followUpPlan: aptData.followUpPlan,
+      relatedDocId: aptData.relatedDocId,
+      relatedDocTitle: aptData.relatedDocTitle,
+    };
+
+    setAppointments((prev) => [newApt, ...prev]);
+
+    const targetMember = members.find((m) => m.id === newApt.memberId) || activeMember;
+    const notif: NotificationItem = {
+      id: `notif-${Date.now()}`,
+      title: 'Doctor Visit Documented',
+      message: `Encounter with ${newApt.doctorName} recorded for ${targetMember.name}.`,
+      timestamp: 'Just now',
+      unread: true,
+      memberName: targetMember.name,
+    };
+    setNotifications((prev) => [notif, ...prev]);
   };
 
   const handleGenerateHealthSummary = async (member: FamilyMember) => {
@@ -502,26 +663,6 @@ export function App() {
     );
   }
 
-  // If viewing Public Landing Page
-  if (isLandingActive) {
-    return (
-      <>
-        <LandingPage
-          onEnterApp={() => setIsLandingActive(false)}
-          onOpenAuth={handleOpenAuth}
-        />
-        <AuthModal
-          isOpen={authModal.isOpen}
-          initialMode={authModal.mode}
-          onClose={() => setAuthModal((prev) => ({ ...prev, isOpen: false }))}
-          onSuccess={handleAuthSuccess}
-          demoMembers={members}
-          currentFamily={family}
-        />
-      </>
-    );
-  }
-
   return (
     <div className="min-h-screen bg-[#F8FAFC] flex flex-col font-sans text-slate-900 selection:bg-teal-100 selection:text-teal-900">
       {/* Top Navigation Bar with Desktop Navigation */}
@@ -558,21 +699,59 @@ export function App() {
             prev.map((n) => (n.id === id ? { ...n, unread: false } : n))
           );
         }}
-        onViewLanding={() => setIsLandingActive(true)}
-        isLandingActive={false}
         isSidebarOpen={isSidebarOpen}
         onToggleSidebar={() => setIsSidebarOpen(!isSidebarOpen)}
       />
 
-      {/* Main Body with Optional Desktop Sidebar and View Switcher */}
-      <div className="flex-1 flex max-w-7xl w-full mx-auto">
-        {/* Desktop Sidebar Navigation (collapsible or toggleable) */}
-        {isSidebarOpen && (
-          <div className="hidden md:block flex-shrink-0 animate-in slide-in-from-left-2 duration-150">
+      {/* 1. Mobile Slide-in Drawer (< md screens) */}
+      {isSidebarOpen && (
+        <div className="fixed inset-0 z-50 md:hidden flex" role="dialog" aria-modal="true">
+          <div
+            className="fixed inset-0 bg-slate-900/40 backdrop-blur-xs transition-opacity animate-in fade-in duration-200"
+            onClick={() => setIsSidebarOpen(false)}
+          />
+          <aside className="relative z-10 w-64 max-w-[80vw] bg-white h-full border-r border-slate-200/90 shadow-2xl flex flex-col animate-in slide-in-from-left duration-200">
             <Sidebar
               currentView={currentView}
+              onClose={() => setIsSidebarOpen(false)}
               onSelectView={(v) => {
                 setCurrentView(v);
+                setIsSidebarOpen(false);
+                setIsMemberDetailView(false);
+                if (v === 'timeline') setMemberProfileInitialTab('timeline');
+                if (v === 'reports') setMemberProfileInitialTab('reports');
+                if (v === 'medications') setMemberProfileInitialTab('medications');
+                if (v === 'appointments') setMemberProfileInitialTab('doctors');
+              }}
+              onOpenUpload={() => {
+                setIsUploadModalOpen(true);
+                setIsSidebarOpen(false);
+              }}
+              activeMember={activeMember}
+              members={members}
+              onSelectMember={(m) => {
+                setActiveMember(m);
+                setIsSidebarOpen(false);
+              }}
+            />
+          </aside>
+        </div>
+      )}
+
+      {/* 2. Main Body Container: Flex row where Desktop Sidebar is docked on the left and Page Content starts to the right */}
+      <div className="flex-1 flex w-full relative">
+        {/* Desktop Docked Sidebar (flush with navbar bottom, sticky top-16, does NOT scroll with page) */}
+        {isSidebarOpen && (
+          <aside
+            id="desktop-docked-sidebar"
+            className="hidden md:flex flex-col w-64 flex-shrink-0 sticky top-16 h-[calc(100vh-4rem)] bg-white border-r border-slate-200/90 z-30 overflow-hidden"
+          >
+            <Sidebar
+              currentView={currentView}
+              onClose={() => setIsSidebarOpen(false)}
+              onSelectView={(v) => {
+                setCurrentView(v);
+                setIsMemberDetailView(false);
                 if (v === 'timeline') setMemberProfileInitialTab('timeline');
                 if (v === 'reports') setMemberProfileInitialTab('reports');
                 if (v === 'medications') setMemberProfileInitialTab('medications');
@@ -583,17 +762,18 @@ export function App() {
               members={members}
               onSelectMember={(m) => setActiveMember(m)}
             />
-          </div>
+          </aside>
         )}
 
-        {/* Content Area */}
+        {/* Content Area: Starts immediately beside the menu, never hidden behind it, scrolls naturally */}
         <main className="flex-1 min-w-0 p-4 sm:p-6 lg:p-8">
-          {/* Incoming Family Invitations Banner */}
-          <PendingInvitationsBanner
-            invitations={pendingInvitations}
-            onAccept={handleAcceptInvitation}
-            onDecline={handleDeclineInvitation}
-          />
+          <div className="max-w-7xl mx-auto w-full">
+            {/* Incoming Family Invitations Banner */}
+            <PendingInvitationsBanner
+              invitations={pendingInvitations}
+              onAccept={handleAcceptInvitation}
+              onDecline={handleDeclineInvitation}
+            />
 
           {/* 1. FAMILY OVERVIEW DASHBOARD */}
           {currentView === 'overview' && (
@@ -605,6 +785,7 @@ export function App() {
               appointments={appointments}
               medications={medications}
               timeline={timeline}
+              conditions={conditions}
               onSelectMember={(m) => {
                 setActiveMember(m);
                 setMemberProfileInitialTab('overview');
@@ -616,36 +797,188 @@ export function App() {
               onViewReport={(doc) => setSelectedReportForDetail(doc)}
               onAddMember={handleAddMember}
               onOpenInviteModal={() => setIsInviteModalOpen(true)}
+              onNavigateView={(v) => setCurrentView(v)}
             />
           )}
 
-          {/* 2. FAMILY MEMBERS PROFILE VIEW */}
-          {(currentView === 'members' ||
-            currentView === 'timeline' ||
-            currentView === 'reports' ||
-            currentView === 'medications' ||
-            currentView === 'appointments') && (
-            <MemberProfile
-              member={activeMember}
-              allMembers={members}
+          {/* 2. FAMILY MEMBERS & HEALTH CONDITIONS DIRECTORY VIEW */}
+          {currentView === 'members' && !isMemberDetailView && (
+            <FamilyMembersView
+              members={members}
+              conditions={conditions}
+              medications={medications}
+              documents={documents}
+              doctors={doctors}
+              family={family}
+              onSelectMemberForProfile={(m) => {
+                setActiveMember(m);
+                setIsMemberDetailView(true);
+              }}
+              onViewReport={(doc) => setSelectedReportForDetail(doc)}
+              onOpenAIAssistant={handleOpenAIAssistant}
+              onOpenDoctorShare={(m) => setDoctorShareModal({ isOpen: true, member: m })}
+              onOpenDoctorVisit={(m) => setDoctorVisitModal({ isOpen: true, member: m })}
+              onAddCondition={handleAddCondition}
+              onUpdateCondition={handleUpdateCondition}
+              onAddMember={handleAddMember}
+              onOpenInviteModal={() => setIsInviteModalOpen(true)}
+            />
+          )}
+
+          {/* 2.1 INDIVIDUAL MEMBER PROFILE VIEW (WHEN DRILLED DOWN) */}
+          {currentView === 'members' && isMemberDetailView && (
+            <div className="space-y-4">
+              <div className="flex items-center justify-between bg-white p-3.5 rounded-2xl border border-slate-200 shadow-2xs">
+                <button
+                  onClick={() => setIsMemberDetailView(false)}
+                  className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs transition"
+                >
+                  <ArrowLeft className="w-4 h-4" />
+                  <span>Back to All Family Members & Conditions</span>
+                </button>
+                <span className="text-xs text-slate-500 font-medium hidden sm:inline">
+                  Viewing individual clinical record for <strong className="text-slate-800">{activeMember.name}</strong>
+                </span>
+              </div>
+              <MemberProfile
+                member={activeMember}
+                allMembers={members}
+                documents={documents}
+                conditions={conditions}
+                medications={medications}
+                treatments={treatments}
+                doctors={doctors}
+                timeline={timeline}
+                initialTab={memberProfileInitialTab}
+                family={family}
+                currentUser={currentUser}
+                onSelectMember={(m) => setActiveMember(m)}
+                onOpenUpload={() => setIsUploadModalOpen(true)}
+                onOpenDoctorVisit={(m) => setDoctorVisitModal({ isOpen: true, member: m })}
+                onGenerateHealthSummary={handleGenerateHealthSummary}
+                onOpenDoctorShare={(m) => setDoctorShareModal({ isOpen: true, member: m })}
+                onViewReport={(doc) => setSelectedReportForDetail(doc)}
+                onOpenAIAssistant={handleOpenAIAssistant}
+                onAddMedication={handleAddMedication}
+                onAddMember={handleAddMember}
+                onOpenInviteModal={() => setIsInviteModalOpen(true)}
+                onUpdateMember={handleUpdateMember}
+                onBackToOverview={() => {
+                  if (currentView === 'members') {
+                    setIsMemberDetailView(false);
+                  } else {
+                    setCurrentView('overview');
+                  }
+                }}
+              />
+            </div>
+          )}
+
+          {/* 2.2 DEDICATED DOCTOR VISITS & CLINICAL REPORTS PAGE */}
+          {currentView === 'appointments' && (
+            <DoctorVisitsView
+              appointments={appointments}
+              members={members}
+              activeMember={activeMember}
+              onSelectMember={(m) => setActiveMember(m)}
+              doctors={doctors}
+              documents={documents}
+              onViewReport={(doc) => setSelectedReportForDetail(doc)}
+              onOpenAIAssistant={handleOpenAIAssistant}
+              onOpenDoctorVisitModal={(m) => setDoctorVisitModal({ isOpen: true, member: m })}
+              onOpenDoctorShare={(m) => setDoctorShareModal({ isOpen: true, member: m })}
+              onAddAppointment={handleAddAppointment}
+            />
+          )}
+
+          {/* 2.2 DEDICATED VISUAL LONGITUDINAL HEALTH TIMELINE VIEW */}
+          {currentView === 'timeline' && (
+            <HealthTimelineView
+              members={members}
+              activeMember={activeMember}
+              onSelectMember={(m) => setActiveMember(m)}
+              timeline={timeline}
               documents={documents}
               conditions={conditions}
               medications={medications}
-              treatments={treatments}
               doctors={doctors}
-              timeline={timeline}
-              initialTab={memberProfileInitialTab}
+              family={family}
+              onViewReport={(doc) => setSelectedReportForDetail(doc)}
+              onOpenAIAssistant={handleOpenAIAssistant}
+              onAddTimelineEvent={handleAddTimelineEvent}
+              onOpenUpload={() => setIsUploadModalOpen(true)}
+            />
+          )}
+
+          {/* 2.5 DEDICATED LAB REPORTS & ALL UPLOADED DOCUMENTS VIEW */}
+          {currentView === 'reports' && (
+            <LabReportsView
+              documents={documents}
+              members={members}
+              activeMember={activeMember}
               onSelectMember={(m) => setActiveMember(m)}
               onOpenUpload={() => setIsUploadModalOpen(true)}
-              onOpenDoctorVisit={(m) => setDoctorVisitModal({ isOpen: true, member: m })}
-              onGenerateHealthSummary={handleGenerateHealthSummary}
-              onOpenDoctorShare={(m) => setDoctorShareModal({ isOpen: true, member: m })}
+              onViewReport={(doc) => setSelectedReportForDetail(doc)}
+              onOpenAIAssistant={handleOpenAIAssistant}
+              onUpdateDocumentRemarks={handleUpdateDocumentRemarks}
+            />
+          )}
+
+          {/* 2.6 DEDICATED MEDICATIONS & PRESCRIPTION LEDGER VIEW */}
+          {currentView === 'medications' && (
+            <MedicationsView
+              medications={medications}
+              members={members}
+              activeMember={activeMember}
+              documents={documents}
+              doctors={doctors}
+              onSelectMember={(m) => setActiveMember(m || members[0])}
               onViewReport={(doc) => setSelectedReportForDetail(doc)}
               onOpenAIAssistant={handleOpenAIAssistant}
               onAddMedication={handleAddMedication}
-              onUpdateMember={handleUpdateMember}
+              onLogDose={(medId) => {
+                const now = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+                setMedications((prev) =>
+                  prev.map((m) =>
+                    m.id === medId ? { ...m, lastConsumedDate: `Today, ${now}` } : m
+                  )
+                );
+              }}
             />
           )}
+
+          {/* Top Breadcrumb Bar for Secondary Pages */}
+          {currentView !== 'overview' &&
+            currentView !== 'members' &&
+            currentView !== 'timeline' &&
+            currentView !== 'reports' &&
+            currentView !== 'medications' &&
+            currentView !== 'appointments' && (
+              <div className="mb-6 flex items-center justify-between gap-3 bg-white p-3 sm:px-4 rounded-2xl border border-slate-200/90 shadow-2xs">
+                <div className="flex items-center gap-3 text-xs">
+                  <button
+                    type="button"
+                    onClick={() => setCurrentView('overview')}
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-teal-50 hover:bg-teal-100 text-teal-900 border border-teal-200/80 font-bold rounded-xl transition shadow-2xs group cursor-pointer"
+                    title="Return to Family Health Overview"
+                  >
+                    <ArrowLeft className="w-3.5 h-3.5 text-teal-700 group-hover:-translate-x-0.5 transition" />
+                    <span>Back to Overview</span>
+                  </button>
+
+                  <div className="hidden sm:flex items-center gap-1.5 text-slate-400 font-medium">
+                    <span className="hover:text-slate-600 cursor-pointer" onClick={() => setCurrentView('overview')}>Overview</span>
+                    <span>/</span>
+                    <span className="font-bold text-slate-900">
+                      {currentView === 'ai_assistant' && 'AI Health Assistant'}
+                      {currentView === 'family_history' && 'Family Health Insights & Patterns'}
+                      {currentView === 'doctor_sharing' && 'Doctor Sharing Links'}
+                      {currentView === 'settings' && 'Privacy & Security Controls'}
+                    </span>
+                  </div>
+                </div>
+              </div>
+            )}
 
           {/* 3. CONVERSATIONAL AI HEALTH ASSISTANT */}
           {currentView === 'ai_assistant' && (
@@ -664,82 +997,33 @@ export function App() {
             <FamilyInsightsView
               family={family}
               members={members}
+              documents={documents}
               conditions={conditions}
+              medications={medications}
+              doctors={doctors}
               onSelectMember={(m) => {
                 setActiveMember(m);
                 setCurrentView('members');
               }}
+              onViewReport={(doc) => setSelectedReportForDetail(doc)}
               onOpenDoctorVisit={(m) => setDoctorVisitModal({ isOpen: true, member: m })}
+              onOpenAIAssistant={(query) => {
+                setAiAssistantInitialQuery(query || '');
+                setCurrentView('ai_assistant');
+              }}
+              onUploadReport={() => setIsUploadModalOpen(true)}
             />
           )}
 
           {/* 5. DOCTOR SHARING LINKS OVERVIEW */}
           {currentView === 'doctor_sharing' && (
-            <div className="max-w-4xl mx-auto space-y-6 pb-16">
-              <div className="p-6 bg-white rounded-2xl border border-slate-200/90 shadow-2xs flex items-center justify-between">
-                <div>
-                  <h1 className="text-xl font-bold text-slate-900">Doctor Sharing Links</h1>
-                  <p className="text-xs text-slate-500 mt-1">
-                    Manage temporary, PIN-protected read-only links issued to healthcare providers.
-                  </p>
-                </div>
-                <button
-                  onClick={() => setDoctorShareModal({ isOpen: true, member: activeMember })}
-                  className="px-4 py-2 bg-teal-600 hover:bg-teal-700 text-white rounded-xl text-xs font-bold transition shadow-xs"
-                >
-                  + Generate New Doctor Link
-                </button>
-              </div>
-
-              <div className="space-y-3">
-                {shareLinks.map((link) => {
-                  const targetMem = members.find((m) => m.id === link.memberId) || activeMember;
-                  return (
-                    <div
-                      key={link.id}
-                      className="p-5 bg-white rounded-2xl border border-slate-200/80 shadow-2xs flex flex-col sm:flex-row sm:items-center justify-between gap-4 text-xs"
-                    >
-                      <div className="space-y-1">
-                        <div className="flex items-center gap-2">
-                          <span className="font-bold text-slate-900 text-sm">
-                            {link.recipientDoctor}
-                          </span>
-                          <span className="px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-800 border border-emerald-200 text-[10px] font-semibold">
-                            ACTIVE
-                          </span>
-                        </div>
-                        <div className="text-slate-500 text-xs">
-                          Patient: <strong className="text-slate-800">{targetMem.name}</strong> • Expires in {link.expiresAt}
-                        </div>
-                        <div className="text-[11px] text-teal-700 font-mono">
-                          Access PIN: <strong>{link.accessPin}</strong> • URL: {link.url}
-                        </div>
-                      </div>
-
-                      <div className="flex items-center gap-2">
-                        <button
-                          onClick={() => {
-                            navigator.clipboard.writeText(`${link.url} (PIN: ${link.accessPin})`);
-                            alert('Copied share link and PIN to clipboard!');
-                          }}
-                          className="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg text-xs font-semibold"
-                        >
-                          Copy Link
-                        </button>
-                        <button
-                          onClick={() => {
-                            setShareLinks((prev) => prev.filter((l) => l.id !== link.id));
-                          }}
-                          className="px-3 py-1.5 text-rose-600 hover:bg-rose-50 rounded-lg text-xs font-semibold"
-                        >
-                          Revoke
-                        </button>
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
+            <DoctorSharingView
+              members={members}
+              activeMember={activeMember}
+              shareLinks={shareLinks}
+              onGenerateLinkClick={() => setDoctorShareModal({ isOpen: true, member: activeMember })}
+              onRevokeLink={(linkId) => setShareLinks((prev) => prev.filter((l) => l.id !== linkId))}
+            />
           )}
 
           {/* 6. SETTINGS & PRIVACY */}
@@ -779,6 +1063,7 @@ export function App() {
               </button>
             </div>
           )}
+          </div>
         </main>
       </div>
 
@@ -787,6 +1072,7 @@ export function App() {
         currentView={currentView}
         onSelectView={(v) => {
           setCurrentView(v);
+          setIsMemberDetailView(false);
           if (v === 'timeline') setMemberProfileInitialTab('timeline');
         }}
         onOpenUpload={() => setIsUploadModalOpen(true)}
@@ -837,6 +1123,7 @@ export function App() {
       <DoctorShareModal
         isOpen={doctorShareModal.isOpen}
         member={doctorShareModal.member}
+        members={members}
         onClose={() => setDoctorShareModal((prev) => ({ ...prev, isOpen: false }))}
         existingLinks={shareLinks}
         onCreateLink={(link) => setShareLinks((prev) => [link, ...prev])}

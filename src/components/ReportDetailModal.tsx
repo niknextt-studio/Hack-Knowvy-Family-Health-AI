@@ -4,6 +4,8 @@ import {
   FileText,
   Sparkles,
   Calendar,
+  Clock,
+  MessageSquare,
   Building,
   User,
   Stethoscope,
@@ -61,9 +63,23 @@ export const ReportDetailModal: React.FC<ReportDetailModalProps> = ({
                   {document.type}
                 </span>
               </div>
-              <p className="text-xs text-slate-500">
-                Patient: <strong className="text-slate-800">{member.name}</strong> • Date: {document.date} • {document.facility}
-              </p>
+              <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-slate-500 mt-1">
+                <span>Patient: <strong className="text-slate-800">{member.name}</strong></span>
+                <span>•</span>
+                <span>Report Date: <strong className="text-slate-700">{document.date}</strong></span>
+                {document.uploadDate && (
+                  <>
+                    <span>•</span>
+                    <span className="flex items-center gap-1 text-teal-700">
+                      <Clock className="w-3 h-3" />
+                      <span>Uploaded: <strong>{new Date(document.uploadDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}</strong></span>
+                    </span>
+                  </>
+                )}
+                <span>•</span>
+                <span>{document.facility}</span>
+                <span>({document.fileSize})</span>
+              </div>
             </div>
           </div>
 
@@ -216,6 +232,19 @@ export const ReportDetailModal: React.FC<ReportDetailModalProps> = ({
               </div>
               <p className="text-xs text-slate-700 leading-relaxed italic">
                 "{document.aiSummary}"
+              </p>
+            </div>
+          )}
+
+          {/* Clinical Remarks & Uploaded Notes */}
+          {document.remarks && (
+            <div className="p-4 rounded-xl bg-slate-50 border border-slate-200/80 space-y-1.5">
+              <div className="flex items-center gap-2 text-xs font-bold text-slate-800">
+                <MessageSquare className="w-4 h-4 text-teal-600" />
+                <span>Physician & Patient Remarks</span>
+              </div>
+              <p className="text-xs text-slate-700 leading-relaxed italic">
+                "{document.remarks}"
               </p>
             </div>
           )}

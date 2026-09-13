@@ -44,6 +44,7 @@ export const DocumentUploadModal: React.FC<DocumentUploadModalProps> = ({
   const [reviewedFacility, setReviewedFacility] = useState('');
   const [reviewedLabs, setReviewedLabs] = useState<LabResult[]>([]);
   const [reviewedSummary, setReviewedSummary] = useState('');
+  const [reviewedRemarks, setReviewedRemarks] = useState('');
 
   if (!isOpen) return null;
 
@@ -143,6 +144,8 @@ export const DocumentUploadModal: React.FC<DocumentUploadModalProps> = ({
       previewText: reviewedSummary || 'Diagnostic laboratory analysis and report summary.',
       status: 'confirmed',
       aiSummary: reviewedSummary,
+      uploadDate: new Date().toISOString(),
+      remarks: reviewedRemarks || reviewedSummary || 'Diagnostic laboratory analysis and report summary.',
       extractedData: {
         documentType: docType,
         date: reviewedDate,
@@ -188,6 +191,60 @@ export const DocumentUploadModal: React.FC<DocumentUploadModalProps> = ({
           >
             <X className="w-4 h-4" />
           </button>
+        </div>
+
+        {/* STEP PROGRESS BAR */}
+        <div className="bg-slate-50 border-b border-slate-100 px-6 py-2.5 flex items-center justify-between text-xs">
+          <div className="flex items-center gap-2">
+            <span
+              className={`w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-bold ${
+                step === 'select'
+                  ? 'bg-teal-600 text-white'
+                  : 'bg-teal-100 text-teal-800'
+              }`}
+            >
+              1
+            </span>
+            <span className={`font-semibold ${step === 'select' ? 'text-teal-900' : 'text-slate-500'}`}>
+              Select File
+            </span>
+          </div>
+
+          <div className="h-0.5 w-8 bg-slate-200" />
+
+          <div className="flex items-center gap-2">
+            <span
+              className={`w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-bold ${
+                step === 'analyzing'
+                  ? 'bg-teal-600 text-white animate-pulse'
+                  : step === 'preview'
+                  ? 'bg-teal-100 text-teal-800'
+                  : 'bg-slate-200 text-slate-500'
+              }`}
+            >
+              2
+            </span>
+            <span className={`font-semibold ${step === 'analyzing' ? 'text-teal-900' : 'text-slate-500'}`}>
+              AI Extraction
+            </span>
+          </div>
+
+          <div className="h-0.5 w-8 bg-slate-200" />
+
+          <div className="flex items-center gap-2">
+            <span
+              className={`w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-bold ${
+                step === 'preview'
+                  ? 'bg-teal-600 text-white'
+                  : 'bg-slate-200 text-slate-500'
+              }`}
+            >
+              3
+            </span>
+            <span className={`font-semibold ${step === 'preview' ? 'text-teal-900' : 'text-slate-500'}`}>
+              Review & Save
+            </span>
+          </div>
         </div>
 
         {/* STEP 1: SELECT FILE */}
@@ -450,13 +507,27 @@ export const DocumentUploadModal: React.FC<DocumentUploadModalProps> = ({
             {/* AI Summary note */}
             <div>
               <label className="block text-xs font-semibold text-slate-700 mb-1">
-                AI Clinical Record Note
+                AI Clinical Record Summary
               </label>
               <textarea
                 rows={2}
                 value={reviewedSummary}
                 onChange={(e) => setReviewedSummary(e.target.value)}
                 className="w-full px-3 py-2 border border-slate-200 rounded-lg text-xs focus:outline-none focus:ring-1 focus:ring-teal-500"
+              />
+            </div>
+
+            {/* Doctor Remarks or Personal Information */}
+            <div>
+              <label className="block text-xs font-semibold text-slate-700 mb-1">
+                Remarks / Doctor's Advice / Notes
+              </label>
+              <textarea
+                rows={2}
+                placeholder="e.g., Doctor advised reducing sodium and follow-up in 3 months..."
+                value={reviewedRemarks}
+                onChange={(e) => setReviewedRemarks(e.target.value)}
+                className="w-full px-3 py-2 border border-slate-200 rounded-lg text-xs focus:outline-none focus:ring-1 focus:ring-teal-500 placeholder:text-slate-400"
               />
             </div>
 
