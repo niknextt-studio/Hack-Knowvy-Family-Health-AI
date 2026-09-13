@@ -1,0 +1,135 @@
+{
+  "entities": {
+    "UserAccount": {
+      "title": "UserAccount",
+      "description": "User profile associated with an authenticated account",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "maxLength": 128 },
+        "userId": { "type": "string", "maxLength": 128 },
+        "email": { "type": "string", "maxLength": 256 },
+        "name": { "type": "string", "maxLength": 120 },
+        "memberCode": { "type": "string", "maxLength": 32, "pattern": "^[A-Z0-9\\-]+$" },
+        "age": { "type": "number" },
+        "dob": { "type": "string", "maxLength": 32 },
+        "gender": { "type": "string", "maxLength": 64 },
+        "relationship": { "type": "string", "maxLength": 64 },
+        "status": { "type": "string", "maxLength": 32 },
+        "statusText": { "type": "string", "maxLength": 256 },
+        "bloodType": { "type": "string", "maxLength": 16 },
+        "familyId": { "type": "string", "maxLength": 128 },
+        "avatar": { "type": "string", "maxLength": 1024 },
+        "emergencyContact": { "type": "string", "maxLength": 256 },
+        "primaryPhysician": { "type": "string", "maxLength": 256 },
+        "createdAt": { "type": "string", "maxLength": 64 },
+        "updatedAt": { "type": "string", "maxLength": 64 }
+      },
+      "required": ["id", "userId", "name", "memberCode"]
+    },
+    "FamilyVault": {
+      "title": "FamilyVault",
+      "description": "A secure health vault shared among family members",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "maxLength": 128 },
+        "name": { "type": "string", "maxLength": 160 },
+        "adminId": { "type": "string", "maxLength": 128 },
+        "adminName": { "type": "string", "maxLength": 120 },
+        "inviteCode": { "type": "string", "maxLength": 32 },
+        "memberCount": { "type": "number" },
+        "createdAt": { "type": "string", "maxLength": 64 },
+        "updatedAt": { "type": "string", "maxLength": 64 }
+      },
+      "required": ["id", "name", "adminId"]
+    },
+    "FamilyMemberDoc": {
+      "title": "FamilyMemberDoc",
+      "description": "Profile of a family member participating in a family vault",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "maxLength": 128 },
+        "familyId": { "type": "string", "maxLength": 128 },
+        "memberCode": { "type": "string", "maxLength": 32 },
+        "name": { "type": "string", "maxLength": 120 },
+        "age": { "type": "number" },
+        "dob": { "type": "string", "maxLength": 32 },
+        "relationship": { "type": "string", "maxLength": 64 },
+        "status": { "type": "string", "maxLength": 32 },
+        "statusText": { "type": "string", "maxLength": 256 },
+        "bloodType": { "type": "string", "maxLength": 16 },
+        "avatar": { "type": "string", "maxLength": 1024 },
+        "emergencyContact": { "type": "string", "maxLength": 256 },
+        "primaryPhysician": { "type": "string", "maxLength": 256 },
+        "email": { "type": "string", "maxLength": 256 },
+        "createdAt": { "type": "string", "maxLength": 64 }
+      },
+      "required": ["id", "familyId", "name", "memberCode"]
+    },
+    "FamilyInvitationDoc": {
+      "title": "FamilyInvitationDoc",
+      "description": "Invitation linking another member code to join a family vault",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "maxLength": 128 },
+        "familyId": { "type": "string", "maxLength": 128 },
+        "familyName": { "type": "string", "maxLength": 160 },
+        "inviterId": { "type": "string", "maxLength": 128 },
+        "inviterName": { "type": "string", "maxLength": 120 },
+        "inviterEmail": { "type": "string", "maxLength": 256 },
+        "inviterCode": { "type": "string", "maxLength": 32 },
+        "inviteeId": { "type": "string", "maxLength": 128 },
+        "inviteeCode": { "type": "string", "maxLength": 32 },
+        "inviteeName": { "type": "string", "maxLength": 120 },
+        "proposedRelationship": { "type": "string", "maxLength": 64 },
+        "status": { "type": "string", "maxLength": 32, "enum": ["pending", "accepted", "declined"] },
+        "note": { "type": "string", "maxLength": 500 },
+        "createdAt": { "type": "string", "maxLength": 64 },
+        "updatedAt": { "type": "string", "maxLength": 64 }
+      },
+      "required": ["id", "familyId", "inviterId", "inviteeCode", "status"]
+    },
+    "MedicalDocumentDoc": {
+      "title": "MedicalDocumentDoc",
+      "description": "Uploaded or extracted medical report in a family vault",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "maxLength": 128 },
+        "familyId": { "type": "string", "maxLength": 128 },
+        "memberId": { "type": "string", "maxLength": 128 },
+        "title": { "type": "string", "maxLength": 200 },
+        "type": { "type": "string", "maxLength": 64 },
+        "date": { "type": "string", "maxLength": 32 },
+        "doctor": { "type": "string", "maxLength": 128 },
+        "facility": { "type": "string", "maxLength": 160 },
+        "fileSize": { "type": "string", "maxLength": 32 },
+        "fileType": { "type": "string", "maxLength": 16 },
+        "previewText": { "type": "string", "maxLength": 2000 },
+        "status": { "type": "string", "maxLength": 32 },
+        "createdAt": { "type": "string", "maxLength": 64 }
+      },
+      "required": ["id", "memberId", "title"]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": "UserAccount",
+      "description": "Authenticated user's profile and settings"
+    },
+    "/families/{familyId}": {
+      "schema": "FamilyVault",
+      "description": "Family vault meta document"
+    },
+    "/families/{familyId}/members/{memberId}": {
+      "schema": "FamilyMemberDoc",
+      "description": "Members linked inside a family vault"
+    },
+    "/invitations/{invitationId}": {
+      "schema": "FamilyInvitationDoc",
+      "description": "Family invitations sent via personal member codes"
+    },
+    "/medicalDocuments/{documentId}": {
+      "schema": "MedicalDocumentDoc",
+      "description": "Health records and lab documents uploaded by members"
+    }
+  }
+}

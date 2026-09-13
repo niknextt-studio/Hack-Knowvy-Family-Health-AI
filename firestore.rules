@@ -1,0 +1,106 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Default-deny catch-all (Global Safety Net)
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // Connection testing endpoint
+    match /test/{docId} {
+      allow read: if true;
+    }
+
+    // Primitives and validation functions
+    function isValidId(id) {
+      return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+
+    // Entity validation helpers
+    function isValidUserAccount(data) {
+      return data.name is string && data.name.size() > 0 && data.name.size() <= 120
+        && data.memberCode is string && data.memberCode.size() >= 3 && data.memberCode.size() <= 32
+        && (!('email' in data) || (data.email is string && data.email.size() <= 256))
+        && (!('age' in data) || (data.age is number && data.age >= 0 && data.age <= 130))
+        && (!('familyId' in data) || (data.familyId is string && data.familyId.size() <= 128));
+    }
+
+    function isValidFamily(data) {
+      return data.name is string && data.name.size() > 0 && data.name.size() <= 160
+        && data.adminId is string && data.adminId.size() <= 128
+        && (!('inviteCode' in data) || (data.inviteCode is string && data.inviteCode.size() <= 32));
+    }
+
+    function isValidInvitation(data) {
+      return data.familyId is string && data.familyId.size() <= 128
+        && data.inviterId is string && data.inviterId.size() <= 128
+        && data.inviteeCode is string && data.inviteeCode.size() <= 32
+        && data.status in ['pending', 'accepted', 'declined'];
+    }
+
+    function isValidMedicalDoc(data) {
+      return data.title is string && data.title.size() > 0 && data.title.size() <= 200
+        && data.memberId is string && data.memberId.size() <= 128;
+    }
+
+    // 1. Users collection
+    match /users/{userId} {
+      allow get: if isSignedIn();
+      allow list: if isSignedIn();
+      allow create: if isSignedIn() && isOwner(userId) && isValidUserAccount(incoming());
+      allow update: if isSignedIn() && isOwner(userId) && isValidUserAccount(incoming());
+      allow delete: if isSignedIn() && isOwner(userId);
+    }
+
+    // 2. Families collection
+    match /families/{familyId} {
+      allow get: if isSignedIn();
+      allow list: if isSignedIn();
+      allow create: if isSignedIn() && incoming().adminId == request.auth.uid && isValidFamily(incoming());
+      allow update: if isSignedIn() && isValidFamily(incoming());
+      allow delete: if isSignedIn() && existing().adminId == request.auth.uid;
+
+      // Subcollection for family members
+      match /members/{memberId} {
+        allow read: if isSignedIn();
+        allow write: if isSignedIn();
+      }
+    }
+
+    // 3. Invitations collection
+    match /invitations/{invitationId} {
+      allow get, list: if isSignedIn();
+      allow create: if isSignedIn() && incoming().inviterId == request.auth.uid && isValidInvitation(incoming());
+      allow update: if isSignedIn() && isValidInvitation(incoming()) && (
+        existing().inviterId == request.auth.uid ||
+        incoming().status in ['accepted', 'declined']
+      );
+      allow delete: if isSignedIn() && existing().inviterId == request.auth.uid;
+    }
+
+    // 4. Medical Documents
+    match /medicalDocuments/{docId} {
+      allow read: if isSignedIn();
+      allow create: if isSignedIn() && isValidMedicalDoc(incoming());
+      allow update: if isSignedIn() && isValidMedicalDoc(incoming());
+      allow delete: if isSignedIn();
+    }
+  }
+}

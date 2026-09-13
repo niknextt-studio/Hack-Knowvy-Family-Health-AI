@@ -28,6 +28,7 @@ export const INITIAL_FAMILY: Family = {
 export const INITIAL_MEMBERS: FamilyMember[] = [
   {
     id: 'mem-rajesh',
+    memberCode: 'FH-782914',
     name: 'Rajesh Sharma',
     age: 54,
     dob: '1972-04-18',
@@ -40,6 +41,9 @@ export const INITIAL_MEMBERS: FamilyMember[] = [
     avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150&auto=format&fit=crop&q=80',
     emergencyContact: '+1 (555) 349-2811 (Sunita Sharma - Spouse)',
     primaryPhysician: 'Dr. Anita Desai (Cardiology / Internal Med)',
+    email: 'rajesh.sharma@gmail.com',
+    gender: 'Male',
+    medicalHistoryNotes: 'Type 2 Diabetes diagnosed 2019. Gallbladder removal (laparoscopic cholecystectomy) 2017.',
     vitals: {
       bloodPressure: '142/88',
       bloodPressureStatus: 'monitoring',
@@ -54,6 +58,7 @@ export const INITIAL_MEMBERS: FamilyMember[] = [
   },
   {
     id: 'mem-sunita',
+    memberCode: 'FH-619482',
     name: 'Sunita Sharma',
     age: 51,
     dob: '1975-08-22',
@@ -66,6 +71,9 @@ export const INITIAL_MEMBERS: FamilyMember[] = [
     avatar: 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=150&auto=format&fit=crop&q=80',
     emergencyContact: '+1 (555) 349-2810 (Rajesh Sharma - Spouse)',
     primaryPhysician: 'Dr. Sameer Gupta (Endocrinology)',
+    email: 'sunita.sharma@gmail.com',
+    gender: 'Female',
+    medicalHistoryNotes: 'Hypothyroidism since 2015 on daily levothyroxine. Mild seasonal rhinitis.',
     vitals: {
       bloodPressure: '120/80',
       bloodPressureStatus: 'normal',
@@ -80,6 +88,7 @@ export const INITIAL_MEMBERS: FamilyMember[] = [
   },
   {
     id: 'mem-aarav',
+    memberCode: 'FH-301984',
     name: 'Aarav Sharma',
     age: 22,
     dob: '2004-11-05',
@@ -92,6 +101,9 @@ export const INITIAL_MEMBERS: FamilyMember[] = [
     avatar: 'https://images.unsplash.com/photo-1539571696357-5a69c17a67c6?w=150&auto=format&fit=crop&q=80',
     emergencyContact: '+1 (555) 349-2810 (Rajesh Sharma - Father)',
     primaryPhysician: 'Dr. Marcus Vance (General Medicine)',
+    email: 'aarav.sharma@gmail.com',
+    gender: 'Male',
+    medicalHistoryNotes: 'Active athlete, routine annual health clearance done in August.',
     vitals: {
       bloodPressure: '118/76',
       bloodPressureStatus: 'normal',
@@ -102,6 +114,7 @@ export const INITIAL_MEMBERS: FamilyMember[] = [
   },
   {
     id: 'mem-meera',
+    memberCode: 'FH-948271',
     name: 'Meera Sharma',
     age: 76,
     dob: '1950-02-14',
@@ -114,6 +127,9 @@ export const INITIAL_MEMBERS: FamilyMember[] = [
     avatar: 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=150&auto=format&fit=crop&q=80',
     emergencyContact: '+1 (555) 349-2810 (Rajesh Sharma - Son)',
     primaryPhysician: 'Dr. K. Patel (Orthopedics / Geriatrics)',
+    email: 'meera.sharma@gmail.com',
+    gender: 'Female',
+    medicalHistoryNotes: 'Bilateral knee osteoarthritis, history of right cataract surgery in 2021.',
     vitals: {
       bloodPressure: '132/82',
       bloodPressureStatus: 'normal',

@@ -44,13 +44,90 @@ import { DoctorShareModal } from './components/DoctorShareModal';
 import { GlobalSearchModal } from './components/GlobalSearchModal';
 import { PrivacySettingsModal } from './components/PrivacySettingsModal';
 import { FamilyInsightsView } from './components/FamilyInsightsView';
+import { LoginPage } from './components/LoginPage';
+import { InviteMemberModal } from './components/InviteMemberModal';
+import { PendingInvitationsBanner } from './components/PendingInvitationsBanner';
+import {
+  getUserFamilyAndMembers,
+  getPendingInvitationsForUser,
+  acceptFamilyInvitation,
+  declineFamilyInvitation,
+  generateUniqueMemberCode,
+  getRegisteredAccounts,
+} from './services/accountService';
+import { FamilyInvitation } from './types';
+import {
+  auth,
+  logOutFromFirebase,
+  subscribeToUserInvitations,
+  syncMedicalDocumentToFirestore,
+} from './firebase';
+import { onAuthStateChanged } from 'firebase/auth';
 
 export function App() {
-  // App Domain State
-  const [family, setFamily] = useState<Family>(mockFamily);
-  const [members, setMembers] = useState<FamilyMember[]>(mockMembers);
-  const [currentUser, setCurrentUser] = useState<FamilyMember>(mockMembers[0]);
-  const [activeMember, setActiveMember] = useState<FamilyMember>(mockMembers[0]);
+  // Authentication State
+  const [isAuthenticated, setIsAuthenticated] = useState<boolean>(() => {
+    if (typeof window !== 'undefined') {
+      const savedUser = localStorage.getItem('family_health_auth_user');
+      return !!savedUser;
+    }
+    return false;
+  });
+
+  const [currentUser, setCurrentUser] = useState<FamilyMember>(() => {
+    if (typeof window !== 'undefined') {
+      const saved = localStorage.getItem('family_health_auth_user');
+      if (saved) {
+        try {
+          return JSON.parse(saved);
+        } catch {
+          // fallback
+        }
+      }
+    }
+    return mockMembers[0];
+  });
+
+  // App Domain State: strictly isolated to currentUser's family (no cross-account leakage)
+  const [family, setFamily] = useState<Family>(() => {
+    if (typeof window !== 'undefined') {
+      const saved = localStorage.getItem('family_health_auth_user');
+      if (saved) {
+        try {
+          const parsed = JSON.parse(saved);
+          return getUserFamilyAndMembers(parsed).family;
+        } catch {}
+      }
+    }
+    return mockFamily;
+  });
+
+  const [members, setMembers] = useState<FamilyMember[]>(() => {
+    if (typeof window !== 'undefined') {
+      const saved = localStorage.getItem('family_health_auth_user');
+      if (saved) {
+        try {
+          const parsed = JSON.parse(saved);
+          return getUserFamilyAndMembers(parsed).members;
+        } catch {}
+      }
+    }
+    return mockMembers;
+  });
+
+  const [activeMember, setActiveMember] = useState<FamilyMember>(() => {
+    if (typeof window !== 'undefined') {
+      const saved = localStorage.getItem('family_health_auth_user');
+      if (saved) {
+        try {
+          return JSON.parse(saved);
+        } catch {
+          // fallback
+        }
+      }
+    }
+    return mockMembers[0];
+  });
   const [documents, setDocuments] = useState<MedicalDocument[]>(mockDocuments);
   const [conditions, setConditions] = useState<MedicalCondition[]>(mockConditions);
   const [medications, setMedications] = useState<Medication[]>(mockMedications);
@@ -97,6 +174,95 @@ export function App() {
   });
   const [isPrivacyModalOpen, setIsPrivacyModalOpen] = useState<boolean>(false);
   const [isSidebarOpen, setIsSidebarOpen] = useState<boolean>(false);
+  const [isInviteModalOpen, setIsInviteModalOpen] = useState<boolean>(false);
+  const [pendingInvitations, setPendingInvitations] = useState<FamilyInvitation[]>([]);
+  const [firebaseUser, setFirebaseUser] = useState<any>(() => auth.currentUser);
+
+  // Realtime Firebase Auth synchronization
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, (fbUser) => {
+      setFirebaseUser(fbUser);
+      if (fbUser && !isAuthenticated) {
+        const registered = getRegisteredAccounts();
+        const matched = registered.find(
+          (m) =>
+            m.id === fbUser.uid ||
+            (m.email && fbUser.email && m.email.toLowerCase() === fbUser.email.toLowerCase())
+        );
+        if (matched) {
+          const { family: userFamily, members: userMembers } = getUserFamilyAndMembers(matched);
+          setFamily(userFamily);
+          setMembers(userMembers);
+          setCurrentUser(matched);
+          setActiveMember(matched);
+          setIsAuthenticated(true);
+        }
+      }
+    });
+    return () => unsubscribe();
+  }, [isAuthenticated]);
+
+  // Refresh pending invitations for currentUser
+  const refreshInvitations = () => {
+    if (currentUser && currentUser.memberCode) {
+      const pending = getPendingInvitationsForUser(currentUser.memberCode, currentUser.id);
+      setPendingInvitations(pending);
+    }
+  };
+
+  useEffect(() => {
+    refreshInvitations();
+    const interval = setInterval(refreshInvitations, 3000);
+
+    // Live subscription to Firestore incoming invitations - only when authenticated in Firebase
+    let unsubFirestore: (() => void) | undefined;
+    if (currentUser?.memberCode && firebaseUser) {
+      try {
+        unsubFirestore = subscribeToUserInvitations(currentUser.memberCode, (firestoreInvs) => {
+          if (firestoreInvs.length > 0) {
+            setPendingInvitations((prev) => {
+              const map = new Map<string, FamilyInvitation>();
+              prev.forEach((inv) => map.set(inv.id, inv));
+              firestoreInvs.forEach((inv) => map.set(inv.id, inv));
+              return Array.from(map.values()).filter((inv) => inv.status === 'pending');
+            });
+          }
+        });
+      } catch (err) {
+        console.warn('Firestore subscription fallback:', err);
+      }
+    }
+
+    return () => {
+      clearInterval(interval);
+      if (unsubFirestore) unsubFirestore();
+    };
+  }, [currentUser, firebaseUser]);
+
+  const handleAcceptInvitation = (invitation: FamilyInvitation) => {
+    const result = acceptFamilyInvitation(invitation.id, currentUser);
+    if (result.success && result.family && result.members) {
+      setFamily(result.family);
+      setMembers(result.members);
+      const updatedUser = result.members.find((m) => m.id === currentUser.id) || currentUser;
+      setCurrentUser(updatedUser);
+      refreshInvitations();
+      // Add celebratory notification
+      const notif: NotificationItem = {
+        id: `notif-${Date.now()}`,
+        title: 'Family Vault Connected!',
+        message: `You accepted ${invitation.inviterName}'s invite and joined ${result.family.name}.`,
+        timestamp: 'Just now',
+        unread: true,
+      };
+      setNotifications((prev) => [notif, ...prev]);
+    }
+  };
+
+  const handleDeclineInvitation = (invitation: FamilyInvitation) => {
+    declineFamilyInvitation(invitation.id);
+    refreshInvitations();
+  };
 
   // Global Keyboard listener for Cmd+K search
   useEffect(() => {
@@ -111,6 +277,27 @@ export function App() {
   }, []);
 
   // Handlers
+  const handleUpdateMember = (updated: FamilyMember) => {
+    setMembers((prev) => prev.map((m) => (m.id === updated.id ? updated : m)));
+    if (currentUser.id === updated.id) {
+      setCurrentUser(updated);
+      if (typeof window !== 'undefined') {
+        localStorage.setItem('family_health_auth_user', JSON.stringify(updated));
+      }
+    }
+    if (activeMember.id === updated.id) {
+      setActiveMember(updated);
+    }
+  };
+
+  const handleLogout = () => {
+    if (typeof window !== 'undefined') {
+      localStorage.removeItem('family_health_auth_user');
+    }
+    logOutFromFirebase().catch(() => {});
+    setIsAuthenticated(false);
+  };
+
   const handleOpenAuth = (mode: AuthMode) => {
     setAuthModal({ isOpen: true, mode });
   };
@@ -127,6 +314,7 @@ export function App() {
   const handleAddMember = (newMemberData: Partial<FamilyMember>) => {
     const newMember: FamilyMember = {
       id: `mem-${Date.now()}`,
+      memberCode: generateUniqueMemberCode(),
       name: newMemberData.name || 'New Member',
       age: newMemberData.age || 30,
       dob: newMemberData.dob || '1995-01-01',
@@ -181,6 +369,11 @@ export function App() {
 
   const handleUploadSuccess = (newDoc: MedicalDocument) => {
     setDocuments((prev) => [newDoc, ...prev]);
+
+    // Securely sync document to Firestore
+    syncMedicalDocumentToFirestore(newDoc, family.id).catch((err) => {
+      console.warn('Background Firestore document sync:', err);
+    });
 
     const targetMember = members.find((m) => m.id === newDoc.memberId) || activeMember;
 
@@ -291,6 +484,24 @@ export function App() {
     setCurrentView('ai_assistant');
   };
 
+  // If not authenticated, display the full LoginPage
+  if (!isAuthenticated) {
+    return (
+      <LoginPage
+        existingMembers={members}
+        currentFamily={family}
+        onLoginSuccess={(user, updatedFamily) => {
+          const { family: userFamily, members: userMembers } = getUserFamilyAndMembers(user);
+          setFamily(updatedFamily || userFamily);
+          setMembers(userMembers);
+          setCurrentUser(user);
+          setActiveMember(user);
+          setIsAuthenticated(true);
+        }}
+      />
+    );
+  }
+
   // If viewing Public Landing Page
   if (isLandingActive) {
     return (
@@ -335,6 +546,12 @@ export function App() {
         onOpenDoctorShare={() => setDoctorShareModal({ isOpen: true, member: activeMember })}
         onOpenPrivacy={() => setIsPrivacyModalOpen(true)}
         onOpenUpload={() => setIsUploadModalOpen(true)}
+        onOpenInviteModal={() => setIsInviteModalOpen(true)}
+        onLogout={handleLogout}
+        onEditProfile={() => {
+          setCurrentView('members');
+          setMemberProfileInitialTab('overview');
+        }}
         notifications={notifications}
         onMarkNotificationRead={(id) => {
           setNotifications((prev) =>
@@ -371,6 +588,13 @@ export function App() {
 
         {/* Content Area */}
         <main className="flex-1 min-w-0 p-4 sm:p-6 lg:p-8">
+          {/* Incoming Family Invitations Banner */}
+          <PendingInvitationsBanner
+            invitations={pendingInvitations}
+            onAccept={handleAcceptInvitation}
+            onDecline={handleDeclineInvitation}
+          />
+
           {/* 1. FAMILY OVERVIEW DASHBOARD */}
           {currentView === 'overview' && (
             <FamilyDashboard
@@ -391,6 +615,7 @@ export function App() {
               onOpenAIAssistant={handleOpenAIAssistant}
               onViewReport={(doc) => setSelectedReportForDetail(doc)}
               onAddMember={handleAddMember}
+              onOpenInviteModal={() => setIsInviteModalOpen(true)}
             />
           )}
 
@@ -418,6 +643,7 @@ export function App() {
               onViewReport={(doc) => setSelectedReportForDetail(doc)}
               onOpenAIAssistant={handleOpenAIAssistant}
               onAddMedication={handleAddMedication}
+              onUpdateMember={handleUpdateMember}
             />
           )}
 
@@ -642,6 +868,16 @@ export function App() {
           setPermissions((prev) =>
             prev.map((p) => (p.memberId === updated.memberId ? updated : p))
           );
+        }}
+      />
+
+      <InviteMemberModal
+        isOpen={isInviteModalOpen}
+        onClose={() => setIsInviteModalOpen(false)}
+        currentUser={currentUser}
+        currentFamilyMembers={members}
+        onInviteCreated={() => {
+          refreshInvitations();
         }}
       />
     </div>

@@ -10,6 +10,8 @@ import {
   Copy,
 } from 'lucide-react';
 import { Family, FamilyMember } from '../types';
+import { generateUniqueMemberCode, saveRegisteredAccount } from '../services/accountService';
+import { syncFamilyToFirestore } from '../firebase';
 
 export type AuthMode = 'login' | 'signup' | 'create_family' | 'join_family';
 
@@ -61,6 +63,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
     e.preventDefault();
     const newMember: FamilyMember = {
       id: `mem-${Date.now()}`,
+      memberCode: generateUniqueMemberCode(),
       name: fullName || 'New Family Member',
       age: dob ? Math.max(1, new Date().getFullYear() - new Date(dob).getFullYear()) : 35,
       dob: dob || '1990-01-01',
@@ -81,6 +84,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
         bmi: 23.5,
       },
     };
+    saveRegisteredAccount(newMember);
     onSuccess(newMember, currentFamily);
     onClose();
   };
@@ -102,6 +106,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
 
     const adminMember: FamilyMember = {
       id: `mem-${Date.now()}`,
+      memberCode: generateUniqueMemberCode(),
       name: adminName || 'Family Admin',
       age: 42,
       dob: '1984-05-12',
@@ -122,6 +127,9 @@ export const AuthModal: React.FC<AuthModalProps> = ({
         bmi: 23.5,
       },
     };
+
+    saveRegisteredAccount(adminMember);
+    syncFamilyToFirestore(newFamily).catch(() => {});
 
     setTimeout(() => {
       onSuccess(adminMember, newFamily);

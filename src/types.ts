@@ -23,6 +23,7 @@ export interface Family {
 
 export interface FamilyMember {
   id: string;
+  memberCode: string; // Unique personal code e.g. "FH-492019" used to personally invite
   name: string;
   age: number;
   dob: string;
@@ -35,6 +36,10 @@ export interface FamilyMember {
   avatar: string;
   emergencyContact: string;
   primaryPhysician: string;
+  email?: string;
+  gender?: 'Male' | 'Female' | 'Non-binary' | 'Other' | 'Prefer not to say' | string;
+  medicalHistoryNotes?: string;
+  familyId?: string;
   vitals: {
     bloodPressure: string;
     bloodPressureStatus: 'normal' | 'monitoring' | 'elevated';
@@ -46,6 +51,23 @@ export interface FamilyMember {
     heightCm: number;
     bmi: number;
   };
+}
+
+export interface FamilyInvitation {
+  id: string;
+  familyId: string;
+  familyName: string;
+  inviterId: string;
+  inviterName: string;
+  inviterEmail?: string;
+  inviterCode: string;
+  inviteeId: string;
+  inviteeCode: string;
+  inviteeName: string;
+  proposedRelationship: FamilyMember['relationship'];
+  status: 'pending' | 'accepted' | 'declined';
+  createdAt: string;
+  note?: string;
 }
 
 export interface LabResult {

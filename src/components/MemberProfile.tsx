@@ -23,6 +23,7 @@ import {
   ChevronDown,
   Phone,
   Building,
+  Edit3,
 } from 'lucide-react';
 import {
   FamilyMember,
@@ -33,6 +34,7 @@ import {
   Doctor,
   TimelineEvent,
 } from '../types';
+import { EditProfileModal } from './EditProfileModal';
 
 export type ProfileTab =
   | 'overview'
@@ -62,6 +64,7 @@ interface MemberProfileProps {
   onViewReport: (doc: MedicalDocument) => void;
   onOpenAIAssistant: (member: FamilyMember, suggestedQ?: string) => void;
   onAddMedication: (med: Partial<Medication>) => void;
+  onUpdateMember?: (member: FamilyMember) => void;
 }
 
 export const MemberProfile: React.FC<MemberProfileProps> = ({
@@ -82,8 +85,10 @@ export const MemberProfile: React.FC<MemberProfileProps> = ({
   onViewReport,
   onOpenAIAssistant,
   onAddMedication,
+  onUpdateMember,
 }) => {
   const [activeTab, setActiveTab] = useState<ProfileTab>(initialTab);
+  const [isEditProfileOpen, setIsEditProfileOpen] = useState(false);
   const [showAddMedModal, setShowAddMedModal] = useState(false);
   const [medName, setMedName] = useState('');
   const [medDose, setMedDose] = useState('');
@@ -164,21 +169,42 @@ export const MemberProfile: React.FC<MemberProfileProps> = ({
                 <span className="text-xs bg-slate-100 text-slate-600 px-2 py-0.5 rounded-full font-medium">
                   {member.relationship === 'Self' ? 'Family Admin' : member.relationship}
                 </span>
+                {member.memberCode && (
+                  <span className="font-mono text-xs font-bold px-2 py-0.5 rounded-md bg-teal-50 text-teal-800 border border-teal-200" title="Personal unique member code">
+                    Code: {member.memberCode}
+                  </span>
+                )}
               </div>
 
               <p className="text-xs text-slate-500 mt-1 font-medium">
-                {member.age} years old • DOB: {member.dob} • Blood Type: <strong className="text-slate-800">{member.bloodType}</strong>
+                {member.age}y {member.gender ? `• ${member.gender}` : ''} • Weight: <strong className="text-slate-800">{member.vitals.weightKg} kg</strong> (BMI {member.vitals.bmi}) • Blood: <strong className="text-slate-800">{member.bloodType}</strong>
               </p>
 
               <div className="mt-2.5 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-slate-600">
+                {member.email && <span>Gmail: <strong className="text-slate-800">{member.email}</strong></span>}
                 <span>Emergency: <strong className="text-slate-800">{member.emergencyContact}</strong></span>
                 <span>• Primary: <strong className="text-slate-800">{member.primaryPhysician}</strong></span>
               </div>
+
+              {member.medicalHistoryNotes && (
+                <div className="mt-2 text-xs bg-slate-50 border border-slate-100 rounded-lg px-2.5 py-1 text-slate-600 line-clamp-1">
+                  <span className="font-semibold text-slate-700">Notes:</span> {member.medicalHistoryNotes}
+                </div>
+              )}
             </div>
           </div>
 
           {/* Quick Action buttons */}
           <div className="flex flex-wrap items-center gap-2">
+            <button
+              onClick={() => setIsEditProfileOpen(true)}
+              className="flex items-center gap-1.5 px-3.5 py-2 bg-slate-100 hover:bg-slate-200 text-slate-800 rounded-xl text-xs font-bold transition shadow-2xs"
+              title="Edit personal vitals and medical history"
+            >
+              <Edit3 className="w-3.5 h-3.5 text-slate-600" />
+              <span>Edit Profile</span>
+            </button>
+
             <button
               onClick={() => onGenerateHealthSummary(member)}
               className="flex items-center gap-1.5 px-3.5 py-2 bg-teal-50 hover:bg-teal-100 text-teal-900 border border-teal-200 rounded-xl text-xs font-bold transition shadow-2xs"
@@ -914,6 +940,18 @@ export const MemberProfile: React.FC<MemberProfileProps> = ({
           </div>
         </div>
       )}
+
+      {/* Edit Profile Modal */}
+      <EditProfileModal
+        isOpen={isEditProfileOpen}
+        member={member}
+        onClose={() => setIsEditProfileOpen(false)}
+        onSave={(updated) => {
+          if (onUpdateMember) {
+            onUpdateMember(updated);
+          }
+        }}
+      />
     </div>
   );
 };

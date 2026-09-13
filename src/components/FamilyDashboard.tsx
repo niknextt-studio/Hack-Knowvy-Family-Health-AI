@@ -17,6 +17,11 @@ import {
   ChevronRight,
   ShieldCheck,
   Stethoscope,
+  Copy,
+  Check,
+  UserPlus,
+  Hash,
+  Send,
 } from 'lucide-react';
 import {
   Family,
@@ -40,7 +45,8 @@ interface FamilyDashboardProps {
   onOpenDoctorVisit: (member: FamilyMember) => void;
   onOpenAIAssistant: (member: FamilyMember) => void;
   onViewReport: (doc: MedicalDocument) => void;
-  onAddMember: (newMember: Partial<FamilyMember>) => void;
+  onAddMember?: (newMember: Partial<FamilyMember>) => void;
+  onOpenInviteModal?: () => void;
 }
 
 export const FamilyDashboard: React.FC<FamilyDashboardProps> = ({
@@ -57,8 +63,10 @@ export const FamilyDashboard: React.FC<FamilyDashboardProps> = ({
   onOpenAIAssistant,
   onViewReport,
   onAddMember,
+  onOpenInviteModal,
 }) => {
   const [showAddModal, setShowAddModal] = useState(false);
+  const [copiedCode, setCopiedCode] = useState(false);
   const [newMemberName, setNewMemberName] = useState('');
   const [newMemberAge, setNewMemberAge] = useState('');
   const [newMemberRelation, setNewMemberRelation] = useState<FamilyMember['relationship']>('Other');
@@ -125,6 +133,62 @@ export const FamilyDashboard: React.FC<FamilyDashboardProps> = ({
         </div>
       </div>
 
+      {/* Personal Member Code & Family Invitation Card */}
+      <div className="p-4 sm:p-5 bg-white rounded-2xl border border-teal-200/80 shadow-2xs flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div className="flex items-start gap-3.5">
+          <div className="w-10 h-10 rounded-xl bg-teal-50 border border-teal-200/80 text-teal-700 flex items-center justify-center flex-shrink-0">
+            <Hash className="w-5 h-5 text-teal-600" />
+          </div>
+          <div>
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="text-xs font-bold text-slate-700 uppercase tracking-wider">
+                Your Private Member Code:
+              </span>
+              <span className="font-mono text-sm sm:text-base font-black text-teal-900 bg-teal-50/80 px-2.5 py-0.5 rounded-lg border border-teal-200">
+                {currentUser.memberCode || 'FH-PENDING'}
+              </span>
+              <button
+                type="button"
+                onClick={() => {
+                  if (currentUser.memberCode) {
+                    navigator.clipboard.writeText(currentUser.memberCode);
+                    setCopiedCode(true);
+                    setTimeout(() => setCopiedCode(false), 2000);
+                  }
+                }}
+                className="inline-flex items-center gap-1 text-xs font-bold px-2 py-1 bg-slate-100 hover:bg-teal-50 text-slate-700 hover:text-teal-700 rounded-lg border border-slate-200 transition"
+              >
+                {copiedCode ? (
+                  <>
+                    <Check className="w-3.5 h-3.5 text-teal-600" />
+                    <span className="text-teal-700">Copied!</span>
+                  </>
+                ) : (
+                  <>
+                    <Copy className="w-3.5 h-3.5 text-slate-500" />
+                    <span>Copy Code</span>
+                  </>
+                )}
+              </button>
+            </div>
+            <p className="text-xs text-slate-500 mt-1">
+              Share your personal code with family members. No one else can discover your profile without entering this unique code.
+            </p>
+          </div>
+        </div>
+
+        {onOpenInviteModal && (
+          <button
+            type="button"
+            onClick={onOpenInviteModal}
+            className="flex items-center justify-center gap-2 px-4 py-2.5 bg-teal-600 hover:bg-teal-700 text-white rounded-xl text-xs font-bold shadow-xs transition flex-shrink-0"
+          >
+            <UserPlus className="w-4 h-4" />
+            <span>Invite Member by Code</span>
+          </button>
+        )}
+      </div>
+
       {/* AI Longitudinal Insight Banner */}
       <div className="p-4 rounded-2xl bg-gradient-to-r from-teal-50/80 via-white to-slate-50 border border-teal-200/70 flex flex-col sm:flex-row sm:items-center justify-between gap-4 shadow-2xs">
         <div className="flex items-start gap-3">
@@ -139,12 +203,22 @@ export const FamilyDashboard: React.FC<FamilyDashboardProps> = ({
               </span>
             </div>
             <p className="text-xs text-slate-700 mt-1 leading-relaxed">
-              <strong>Rajesh Sharma's</strong> glycemic control continues to show steady progress: HbA1c dropped to <strong>6.9%</strong> from 7.4%. Meanwhile, blood pressure (142/88) is stabilized but warrants discussion at his upcoming follow-up on Sept 28 with Dr. Sameer Gupta.
+              {currentUser.conditionsSummary && currentUser.conditionsSummary.length > 0 ? (
+                <>
+                  <strong>{currentUser.name}</strong>'s profile is tracking{' '}
+                  <strong>{currentUser.conditionsSummary.join(', ')}</strong>. Vitals (BP{' '}
+                  {currentUser.vitals.bloodPressure || '120/80'}, BMI {currentUser.vitals.bmi}) are documented. Invite family members with their personal code to correlate shared health patterns.
+                </>
+              ) : (
+                <>
+                  <strong>{currentUser.name}</strong>'s health profile is organized and secure. All health documents and vitals are encrypted in your private vault. Take your family member's unique code to invite them and start monitoring family wellness together.
+                </>
+              )}
             </p>
           </div>
         </div>
         <button
-          onClick={() => onOpenDoctorVisit(members[0])}
+          onClick={() => onOpenDoctorVisit(members[0] || currentUser)}
           className="flex-shrink-0 inline-flex items-center gap-1 text-xs font-bold text-teal-700 hover:text-teal-900 transition"
         >
           <span>Prepare Doctor Visit</span>
@@ -158,17 +232,54 @@ export const FamilyDashboard: React.FC<FamilyDashboardProps> = ({
           <div className="flex items-center gap-2">
             <h2 className="text-lg font-bold text-slate-900">Family Members</h2>
             <span className="text-xs px-2 py-0.5 rounded-full bg-slate-100 text-slate-600 font-semibold">
-              {members.length} members
+              {members.length} {members.length === 1 ? 'member' : 'members'}
             </span>
           </div>
-          <button
-            onClick={() => setShowAddModal(true)}
-            className="text-xs font-semibold text-teal-700 hover:text-teal-800 flex items-center gap-1"
-          >
-            <Plus className="w-3.5 h-3.5" />
-            <span>Add Family Member</span>
-          </button>
+          {onOpenInviteModal ? (
+            <button
+              onClick={onOpenInviteModal}
+              className="text-xs font-semibold text-teal-700 hover:text-teal-800 flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-teal-50 hover:bg-teal-100/70 border border-teal-200/80 transition"
+            >
+              <UserPlus className="w-3.5 h-3.5" />
+              <span>Invite by Code</span>
+            </button>
+          ) : (
+            <button
+              onClick={() => setShowAddModal(true)}
+              className="text-xs font-semibold text-teal-700 hover:text-teal-800 flex items-center gap-1"
+            >
+              <Plus className="w-3.5 h-3.5" />
+              <span>Add Member</span>
+            </button>
+          )}
         </div>
+
+        {/* If user is the only member in vault, show family invitation guide */}
+        {members.length === 1 && (
+          <div className="mb-4 p-4 sm:p-5 rounded-2xl border-2 border-dashed border-teal-200 bg-teal-50/30 flex flex-col sm:flex-row items-center justify-between gap-4">
+            <div className="flex items-center gap-3 text-center sm:text-left">
+              <div className="w-10 h-10 rounded-full bg-teal-100 text-teal-700 flex items-center justify-center flex-shrink-0">
+                <Users className="w-5 h-5 text-teal-700" />
+              </div>
+              <div>
+                <h4 className="text-sm font-bold text-slate-900">Create Your Family</h4>
+                <p className="text-xs text-slate-600 mt-0.5 max-w-lg">
+                  Ask your spouse, parent, or family member for their unique code (e.g. <strong>FH-XXXXXX</strong>). Enter their code to invite them. Once they accept, their records will be accessible in this shared vault!
+                </p>
+              </div>
+            </div>
+            {onOpenInviteModal && (
+              <button
+                type="button"
+                onClick={onOpenInviteModal}
+                className="px-4 py-2 bg-teal-600 hover:bg-teal-700 text-white rounded-xl text-xs font-bold transition flex items-center gap-1.5 flex-shrink-0"
+              >
+                <UserPlus className="w-4 h-4" />
+                <span>Enter Code to Invite</span>
+              </button>
+            )}
+          </div>
+        )}
 
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
           {members.map((member) => {
